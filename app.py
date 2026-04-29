@@ -181,10 +181,12 @@ if page == "📊 Price Lookup":
             desc = "Not Found"
 
             if part:
+                # ✅ ONLY FIX APPLIED HERE
                 cur.execute("""
                     SELECT price, description
                     FROM parts_table
-                    WHERE TRIM(LOWER(part_no)) = TRIM(LOWER(%s))
+                    WHERE REGEXP_REPLACE(part_no, '[^0-9]', '', 'g') =
+                          REGEXP_REPLACE(%s, '[^0-9]', '', 'g')
                     LIMIT 1
                 """, (part,))
 
@@ -276,7 +278,6 @@ elif page == "📤 Data Upload":
         for f in files:
             df = pd.read_excel(f, dtype={"Part no": str})
 
-            # ✅ FIXED COLUMN CLEANING (ONLY CHANGE)
             df.columns = df.columns.str.strip().str.lower()
             df.columns = df.columns.str.replace(r"\s+", " ", regex=True)
 
@@ -288,7 +289,6 @@ elif page == "📤 Data Upload":
                 "moq": "moq"
             }, inplace=True)
 
-            # ensure correct values
             df["part_no"] = df["part_no"].astype(str).str.strip()
             df["brand"] = df["brand"].astype(str).str.strip()
 
