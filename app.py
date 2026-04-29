@@ -168,6 +168,9 @@ if page == "📊 Price Lookup":
         for _, r in input_df.iterrows():
 
             part = str(r.get("Part No","")).strip()
+            if part.endswith(".0"):
+                part = part[:-2]
+
             brand = str(r.get("Brand","")).strip()
 
             qty = pd.to_numeric(r.get("Qty"), errors="coerce")
@@ -219,7 +222,6 @@ elif page == "📁 Saved Quotations":
     set_bg("#f0fff4","#e6fffa")
     st.title("Saved Quotations")
 
-    # ❌ ONLY CHANGE: removed created_at from query
     cur.execute("SELECT id, username, data FROM saved_offers ORDER BY created_at DESC")
     rows = cur.fetchall()
 
@@ -229,7 +231,6 @@ elif page == "📁 Saved Quotations":
 
     all_data = []
 
-    # ❌ ONLY CHANGE: removed date variable
     for offer_id, user, data in rows:
         df = pd.DataFrame(json.loads(data) if isinstance(data,str) else data)
         df["Employee"] = user
@@ -274,7 +275,7 @@ elif page == "📤 Data Upload":
 
     if files:
         for f in files:
-            df = pd.read_excel(f)
+            df = pd.read_excel(f, dtype={"part no": str})
             df.columns = df.columns.str.strip().str.lower()
 
             df.rename(columns={
@@ -284,10 +285,13 @@ elif page == "📤 Data Upload":
                 "moq": "moq"
             }, inplace=True)
 
+            df["part_no"] = df["part_no"].astype(str).str.strip()
+            df["part_no"] = df["part_no"].apply(lambda x: x[:-2] if x.endswith(".0") else x)
+
             df["moq"] = pd.to_numeric(df.get("moq", 0), errors="coerce").fillna(0)
 
             values = [
-                (r["part_no"], r["brand"], float(r["price"]), r.get("description",""), int(r["moq"]))
+                (str(r["part_no"]).strip(), r["brand"], float(r["price"]), r.get("description",""), int(r["moq"]))
                 for _, r in df.iterrows()
             ]
 
