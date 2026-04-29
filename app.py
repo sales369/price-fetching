@@ -263,20 +263,36 @@ elif page == "📁 Saved Quotations":
             st.rerun()
 
 # ================= UPLOAD =================
+# ================= UPLOAD =================
 elif page == "📤 Data Upload":
     set_bg("#f5f0ff","#ede9fe")
     st.title("Master Data Upload")
 
-    files = st.file_uploader("Upload Price Sheet", type=["xlsx"], accept_multiple_files=True)
+    files = st.file_uploader(
+        "Upload Price Sheet",
+        type=["xlsx"],
+        accept_multiple_files=True
+    )
+
+    def safe_float(v):
+        try:
+            if v is None or v == "":
+                return 0
+            return float(v)
+        except:
+            return 0
+
+    def safe_int(v):
+        try:
+            if v is None or v == "":
+                return 0
+            return int(float(v))
+        except:
+            return 0
 
     if files:
 
-        progress = st.progress(0)
-        status = st.empty()
-
-        for i, f in enumerate(files, start=1):
-
-            status.info(f"Processing {f.name}")
+        for f in files:
 
             df = pd.read_excel(f)
             df.columns = df.columns.str.strip().str.lower()
@@ -290,30 +306,31 @@ elif page == "📤 Data Upload":
 
             df = df.fillna("")
 
-            values = [
-                (
-                    str(r["part_no"]),
-                    str(r["brand"]),
-                    float(r["price"]) if r["price"] != "" else 0,
-                    str(r.get("description","")),
-                    int(float(r.get("moq",0)))
+            values = []
+
+            for _, r in df.iterrows():
+
+                part_no = str(r.get("part_no","")).strip()
+                brand = str(r.get("brand","")).strip()
+                price = safe_float(r.get("price",""))
+                desc = str(r.get("description","")).strip()
+                moq = safe_int(r.get("moq",""))
+
+                if part_no and brand:
+                    values.append((part_no, brand, price, desc, moq))
+
+            if values:
+                execute_values(
+                    cur,
+                    "INSERT INTO parts_table (part_no,brand,price,description,moq) VALUES %s",
+                    values
                 )
-                for _, r in df.iterrows()
-            ]
+                conn.commit()
 
-            execute_values(
-                cur,
-                "INSERT INTO parts_table (part_no,brand,price,description,moq) VALUES %s",
-                values
-            )
-
-            conn.commit()
-            progress.progress(i/len(files))
+            st.success(f"{f.name} uploaded successfully")
 
         st.cache_data.clear()
-        status.success("Upload completed")
         st.rerun()
-
 # ================= ADMIN =================
 elif page == "🛠 Access Control":
     set_bg("#f3f6ff", "#e8edff")
