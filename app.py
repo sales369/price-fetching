@@ -56,12 +56,12 @@ CREATE TABLE IF NOT EXISTS users (
 );
 """)
 
+# ❌ REMOVED created_at column ONLY
 cur.execute("""
 CREATE TABLE IF NOT EXISTS saved_offers (
     id SERIAL PRIMARY KEY,
     username TEXT,
-    data JSONB,
-    created_at TIMESTAMP DEFAULT NOW()
+    data JSONB
 );
 """)
 
@@ -74,7 +74,7 @@ WHERE NOT EXISTS (SELECT 1 FROM users WHERE username='admin')
 conn.commit()
 
 # ---------------- CACHE ----------------
-@st.cache_data
+@st.cache_data(ttl=60)
 def load_brands():
     cur.execute("SELECT DISTINCT brand FROM parts_table ORDER BY brand")
     return [x[0] for x in cur.fetchall()]
@@ -145,10 +145,10 @@ if page == "📊 Price Lookup":
     col1, col2 = st.columns([10,1])
     with col1:
         st.title("Price Lookup Panel")
-    with col2:
-        if st.button("🔄"):
-            st.cache_data.clear()
-            st.rerun()
+
+    if st.button("🔄"):
+        st.cache_data.clear()
+        st.rerun()
 
     brand_list = load_brands()
 
@@ -162,15 +162,11 @@ if page == "📊 Price Lookup":
     )
 
     if st.button("Get Pricing"):
-
         result = []
 
         for _, r in input_df.iterrows():
 
             part = str(r.get("Part No","")).strip()
-            if part.endswith(".0"):
-                part = part[:-2]
-
             brand = str(r.get("Brand","")).strip()
 
             qty = pd.to_numeric(r.get("Qty"), errors="coerce")
@@ -180,15 +176,14 @@ if page == "📊 Price Lookup":
             price = 0
             desc = "Not Found"
 
-            if part:
-                # ✅ ONLY FIX APPLIED HERE
+            if part and brand:
                 cur.execute("""
                     SELECT price, description
                     FROM parts_table
-                    WHERE REGEXP_REPLACE(part_no, '[^0-9]', '', 'g') =
-                          REGEXP_REPLACE(%s, '[^0-9]', '', 'g')
+                    WHERE LOWER(part_no)=LOWER(%s)
+                    AND LOWER(brand)=LOWER(%s)
                     LIMIT 1
-                """, (part,))
+                """, (part, brand))
 
                 match = cur.fetchone()
 
@@ -223,7 +218,8 @@ elif page == "📁 Saved Quotations":
     set_bg("#f0fff4","#e6fffa")
     st.title("Saved Quotations")
 
-    cur.execute("SELECT id, username, data FROM saved_offers ORDER BY created_at DESC")
+    # ❌ REMOVED created_at ONLY
+    cur.execute("SELECT id, username, data FROM saved_offers ORDER BY id DESC")
     rows = cur.fetchall()
 
     if not rows:
@@ -276,26 +272,26 @@ elif page == "📤 Data Upload":
 
     if files:
         for f in files:
-            df = pd.read_excel(f, dtype={"Part no": str})
-
+            df = pd.read_excel(f)
             df.columns = df.columns.str.strip().str.lower()
-            df.columns = df.columns.str.replace(r"\s+", " ", regex=True)
 
             df.rename(columns={
                 "part no": "part_no",
-                "brand": "brand",
                 "price [eur]": "price",
                 "item description": "description",
                 "moq": "moq"
             }, inplace=True)
 
-            df["part_no"] = df["part_no"].astype(str).str.strip()
-            df["brand"] = df["brand"].astype(str).str.strip()
-
-            df["moq"] = pd.to_numeric(df.get("moq", 0), errors="coerce").fillna(0)
+            df = df.fillna("")
 
             values = [
-                (str(r["part_no"]).strip(), r["brand"], float(r["price"]), r.get("description",""), int(r["moq"]))
+                (
+                    str(r["part_no"]),
+                    str(r["brand"]),
+                    float(r["price"]) if r["price"] != "" else 0,
+                    str(r.get("description","")),
+                    int(float(r.get("moq",0)))
+                )
                 for _, r in df.iterrows()
             ]
 
@@ -312,33 +308,16 @@ elif page == "📤 Data Upload":
 
 # ================= ADMIN =================
 elif page == "🛠 Access Control":
-    set_bg("#f3f6ff", "#e8edff")
+    set_bg("#f3f6ff","#e8edff")
     st.title("User & Access Control")
 
-    st.subheader("➕ Create User Account")
-
-    u = st.text_input("New Username", key="create_user_name")
-    p = st.text_input("New Password", type="password", key="create_user_pass")
+    u = st.text_input("Username")
+    p = st.text_input("Password", type="password")
 
     if st.button("Create User"):
-        cur.execute("INSERT INTO users (username,password) VALUES (%s,%s)", (u,p))
+        cur.execute("INSERT INTO users (username,password) VALUES (%s,%s)",(u,p))
         conn.commit()
         st.success("User Created")
-
-    st.subheader("🗑 Remove User")
-
-    cur.execute("SELECT username FROM users WHERE username != 'admin'")
-    users = [x[0] for x in cur.fetchall()]
-
-    del_user = st.selectbox("Select User", ["-- Select --"] + users)
-
-    if st.button("Delete User"):
-        if del_user != "-- Select --":
-            cur.execute("DELETE FROM users WHERE username=%s", (del_user,))
-            conn.commit()
-            st.success("User deleted")
-
-    st.subheader("🔐 Change Admin Password")
 
     current = st.text_input("Current Password", type="password")
     new_pass = st.text_input("New Password", type="password")
@@ -350,6 +329,6 @@ elif page == "🛠 Access Control":
         if real and current == real[0]:
             cur.execute("UPDATE users SET password=%s WHERE username='admin'", (new_pass,))
             conn.commit()
-            st.success("Password updated")
+            st.success("Updated")
         else:
             st.error("Wrong password")
