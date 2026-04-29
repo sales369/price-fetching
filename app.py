@@ -180,14 +180,13 @@ if page == "📊 Price Lookup":
             price = 0
             desc = "Not Found"
 
-            if part and brand:
+            if part:
                 cur.execute("""
                     SELECT price, description
                     FROM parts_table
-                    WHERE LOWER(part_no)=LOWER(%s)
-                    AND LOWER(brand)=LOWER(%s)
+                    WHERE TRIM(LOWER(part_no)) = TRIM(LOWER(%s))
                     LIMIT 1
-                """, (part, brand))
+                """, (part,))
 
                 match = cur.fetchone()
 
