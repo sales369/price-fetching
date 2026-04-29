@@ -1,0 +1,5 @@
+streamlit
+pandas
+pillow
+sqlite3
+psycopg2-binary
