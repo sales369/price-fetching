@@ -274,18 +274,23 @@ elif page == "📤 Data Upload":
 
     if files:
         for f in files:
-            df = pd.read_excel(f, dtype={"part no": str})
+            df = pd.read_excel(f, dtype={"Part no": str})
+
+            # ✅ FIXED COLUMN CLEANING (ONLY CHANGE)
             df.columns = df.columns.str.strip().str.lower()
+            df.columns = df.columns.str.replace(r"\s+", " ", regex=True)
 
             df.rename(columns={
                 "part no": "part_no",
+                "brand": "brand",
                 "price [eur]": "price",
                 "item description": "description",
                 "moq": "moq"
             }, inplace=True)
 
+            # ensure correct values
             df["part_no"] = df["part_no"].astype(str).str.strip()
-            df["part_no"] = df["part_no"].apply(lambda x: x[:-2] if x.endswith(".0") else x)
+            df["brand"] = df["brand"].astype(str).str.strip()
 
             df["moq"] = pd.to_numeric(df.get("moq", 0), errors="coerce").fillna(0)
 
