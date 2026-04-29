@@ -7,7 +7,7 @@ import json
 from io import BytesIO
 
 # ---------------- DB ----------------
-DATABASE_URL = "postgresql://parts_db_cuis_user:1ZSiJhifmviICTAUAsXkomwJdixt529o@dpg-d7otd1reo5us738gb50g-a.oregon-postgres.render.com/parts_db_cuis"
+DATABASE_URL = "postgresql://parts_u05e_user:YSFdKnBNUWHnXNWDFsjjQzZRcwjMsuT8@dpg-d7ounb9o3t8c7389euf0-a.oregon-postgres.render.com/parts_u05e"
 
 conn = psycopg2.connect(DATABASE_URL)
 cur = conn.cursor()
@@ -56,12 +56,12 @@ CREATE TABLE IF NOT EXISTS users (
 );
 """)
 
-# ❌ REMOVED created_at column ONLY
 cur.execute("""
 CREATE TABLE IF NOT EXISTS saved_offers (
     id SERIAL PRIMARY KEY,
     username TEXT,
-    data JSONB
+    data JSONB,
+    created_at TIMESTAMP DEFAULT NOW()
 );
 """)
 
@@ -74,7 +74,7 @@ WHERE NOT EXISTS (SELECT 1 FROM users WHERE username='admin')
 conn.commit()
 
 # ---------------- CACHE ----------------
-@st.cache_data(ttl=60)
+@st.cache_data
 def load_brands():
     cur.execute("SELECT DISTINCT brand FROM parts_table ORDER BY brand")
     return [x[0] for x in cur.fetchall()]
@@ -142,13 +142,7 @@ with st.sidebar:
 if page == "📊 Price Lookup":
     set_bg("#f0f7ff","#e6f0ff")
 
-    col1, col2 = st.columns([10,1])
-    with col1:
-        st.title("Price Lookup Panel")
-
-    if st.button("🔄"):
-        st.cache_data.clear()
-        st.rerun()
+    st.title("Price Lookup Panel")
 
     brand_list = load_brands()
 
@@ -162,6 +156,7 @@ if page == "📊 Price Lookup":
     )
 
     if st.button("Get Pricing"):
+
         result = []
 
         for _, r in input_df.iterrows():
@@ -213,13 +208,16 @@ if page == "📊 Price Lookup":
             conn.commit()
             st.success("Quotation saved successfully")
 
-# ================= SAVED QUOTATIONS =================
+# ================= SAVED QUOTATIONS (DATE ONLY FIX) =================
 elif page == "📁 Saved Quotations":
     set_bg("#f0fff4","#e6fffa")
     st.title("Saved Quotations")
 
-    # ❌ REMOVED created_at ONLY
-    cur.execute("SELECT id, username, data FROM saved_offers ORDER BY id DESC")
+    cur.execute("""
+        SELECT id, username, data, created_at::date
+        FROM saved_offers
+        ORDER BY created_at DESC
+    """)
     rows = cur.fetchall()
 
     if not rows:
@@ -228,9 +226,10 @@ elif page == "📁 Saved Quotations":
 
     all_data = []
 
-    for offer_id, user, data in rows:
+    for offer_id, user, data, date_only in rows:
         df = pd.DataFrame(json.loads(data) if isinstance(data,str) else data)
         df["Employee"] = user
+        df["Saved On"] = date_only   # ✅ ONLY DATE
         df["Offer ID"] = offer_id
         all_data.append(df)
 
@@ -271,7 +270,14 @@ elif page == "📤 Data Upload":
     files = st.file_uploader("Upload Price Sheet", type=["xlsx"], accept_multiple_files=True)
 
     if files:
-        for f in files:
+
+        progress = st.progress(0)
+        status = st.empty()
+
+        for i, f in enumerate(files, start=1):
+
+            status.info(f"Processing {f.name}")
+
             df = pd.read_excel(f)
             df.columns = df.columns.str.strip().str.lower()
 
@@ -300,15 +306,17 @@ elif page == "📤 Data Upload":
                 "INSERT INTO parts_table (part_no,brand,price,description,moq) VALUES %s",
                 values
             )
+
             conn.commit()
+            progress.progress(i/len(files))
 
         st.cache_data.clear()
-        st.success("Uploaded successfully")
+        status.success("Upload completed")
         st.rerun()
 
 # ================= ADMIN =================
 elif page == "🛠 Access Control":
-    set_bg("#f3f6ff","#e8edff")
+    set_bg("#f3f6ff", "#e8edff")
     st.title("User & Access Control")
 
     u = st.text_input("Username")
@@ -324,9 +332,9 @@ elif page == "🛠 Access Control":
 
     if st.button("Update Password"):
         cur.execute("SELECT password FROM users WHERE username='admin'")
-        real = cur.fetchone()
+        real = cur.fetchone()[0]
 
-        if real and current == real[0]:
+        if current == real:
             cur.execute("UPDATE users SET password=%s WHERE username='admin'", (new_pass,))
             conn.commit()
             st.success("Updated")
