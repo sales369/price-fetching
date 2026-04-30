@@ -172,20 +172,11 @@ if page == "📊 Price Lookup":
             desc = "Not Found"
 
             if part and brand:
-                # ✅ FIXED QUERY (handles ü + spaces + special chars)
                 cur.execute("""
                     SELECT price, description
                     FROM parts_table
-                    WHERE REGEXP_REPLACE(TRIM(LOWER(part_no)), '[^a-z0-9]', '', 'g') =
-                          REGEXP_REPLACE(TRIM(LOWER(%s)), '[^a-z0-9]', '', 'g')
-                    AND REGEXP_REPLACE(
-                            TRANSLATE(LOWER(brand), 'üöä', 'uoa'),
-                            '[^a-z0-9]', '', 'g'
-                        ) =
-                        REGEXP_REPLACE(
-                            TRANSLATE(LOWER(%s), 'üöä', 'uoa'),
-                            '[^a-z0-9]', '', 'g'
-                        )
+                    WHERE LOWER(part_no)=LOWER(%s)
+                    AND LOWER(brand)=LOWER(%s)
                     LIMIT 1
                 """, (part, brand))
 
@@ -217,7 +208,7 @@ if page == "📊 Price Lookup":
             conn.commit()
             st.success("Quotation saved successfully")
 
-# ================= SAVED =================
+# ================= SAVED QUOTATIONS (DATE ONLY FIX) =================
 elif page == "📁 Saved Quotations":
     set_bg("#f0fff4","#e6fffa")
     st.title("Saved Quotations")
@@ -238,18 +229,32 @@ elif page == "📁 Saved Quotations":
     for offer_id, user, data, date_only in rows:
         df = pd.DataFrame(json.loads(data) if isinstance(data,str) else data)
         df["Employee"] = user
-        df["Saved On"] = date_only
+        df["Saved On"] = date_only   # ✅ ONLY DATE
         df["Offer ID"] = offer_id
         all_data.append(df)
 
     final_df = pd.concat(all_data, ignore_index=True)
 
+    employees = ["All"] + sorted(final_df["Employee"].unique())
+    selected_emp = st.selectbox("Filter by Employee", employees)
+
+    if selected_emp != "All":
+        final_df = final_df[final_df["Employee"] == selected_emp]
+
     final_df.insert(0, "Select", False)
 
-    edited_df = st.data_editor(final_df, use_container_width=True)
+    edited_df = st.data_editor(final_df, use_container_width=True, height=350)
 
+    output = BytesIO()
+    final_df.to_excel(output, index=False)
+    output.seek(0)
+
+    st.download_button("⬇ Download Excel", output, file_name="saved_offers.xlsx")
+
+    st.markdown("---")
     if st.button("Delete Selected Quotations"):
         selected = edited_df[edited_df["Select"] == True]
+
         if not selected.empty:
             ids = selected["Offer ID"].unique().tolist()
             cur.execute("DELETE FROM saved_offers WHERE id = ANY(%s)", (ids,))
@@ -258,14 +263,37 @@ elif page == "📁 Saved Quotations":
             st.rerun()
 
 # ================= UPLOAD =================
+# ================= UPLOAD =================
 elif page == "📤 Data Upload":
     set_bg("#f5f0ff","#ede9fe")
     st.title("Master Data Upload")
 
-    files = st.file_uploader("Upload Price Sheet", type=["xlsx"], accept_multiple_files=True)
+    files = st.file_uploader(
+        "Upload Price Sheet",
+        type=["xlsx"],
+        accept_multiple_files=True
+    )
+
+    def safe_float(v):
+        try:
+            if v is None or v == "":
+                return 0
+            return float(v)
+        except:
+            return 0
+
+    def safe_int(v):
+        try:
+            if v is None or v == "":
+                return 0
+            return int(float(v))
+        except:
+            return 0
 
     if files:
+
         for f in files:
+
             df = pd.read_excel(f)
             df.columns = df.columns.str.strip().str.lower()
 
@@ -276,27 +304,37 @@ elif page == "📤 Data Upload":
                 "moq": "moq"
             }, inplace=True)
 
-            values = [
-                (str(r["part_no"]).strip(), str(r["brand"]).strip(), float(r["price"]), r.get("description",""), int(r["moq"]))
-                for _, r in df.iterrows()
-            ]
+            df = df.fillna("")
 
-            execute_values(
-                cur,
-                "INSERT INTO parts_table (part_no,brand,price,description,moq) VALUES %s",
-                values
-            )
-            conn.commit()
+            values = []
 
-        st.success("Uploaded successfully")
+            for _, r in df.iterrows():
+
+                part_no = str(r.get("part_no","")).strip()
+                brand = str(r.get("brand","")).strip()
+                price = safe_float(r.get("price",""))
+                desc = str(r.get("description","")).strip()
+                moq = safe_int(r.get("moq",""))
+
+                if part_no and brand:
+                    values.append((part_no, brand, price, desc, moq))
+
+            if values:
+                execute_values(
+                    cur,
+                    "INSERT INTO parts_table (part_no,brand,price,description,moq) VALUES %s",
+                    values
+                )
+                conn.commit()
+
+            st.success(f"{f.name} uploaded successfully")
+
+        st.cache_data.clear()
         st.rerun()
-
 # ================= ADMIN =================
 elif page == "🛠 Access Control":
     set_bg("#f3f6ff", "#e8edff")
     st.title("User & Access Control")
-
-    st.subheader("➕ Create User")
 
     u = st.text_input("Username")
     p = st.text_input("Password", type="password")
@@ -305,22 +343,6 @@ elif page == "🛠 Access Control":
         cur.execute("INSERT INTO users (username,password) VALUES (%s,%s)",(u,p))
         conn.commit()
         st.success("User Created")
-
-    # ✅ ADDED BACK REMOVE USER
-    st.subheader("🗑 Remove User")
-
-    cur.execute("SELECT username FROM users WHERE username != 'admin'")
-    users = [x[0] for x in cur.fetchall()]
-
-    selected_user = st.selectbox("Select User", ["-- Select --"] + users)
-
-    if st.button("Delete User"):
-        if selected_user != "-- Select --":
-            cur.execute("DELETE FROM users WHERE username=%s",(selected_user,))
-            conn.commit()
-            st.success("User deleted")
-
-    st.subheader("🔐 Change Admin Password")
 
     current = st.text_input("Current Password", type="password")
     new_pass = st.text_input("New Password", type="password")
