@@ -7,7 +7,7 @@ import json
 from io import BytesIO
 
 # ---------------- DB ----------------
-DATABASE_URL = "postgresql://parts_u05e_user:YSFdKnBNUWHnXNWDFsjjQzZRcwjMsuT8@dpg-d7ounb9o3t8c7389euf0-a.oregon-postgres.render.com/parts_u05e"
+DATABASE_URL = "postgresql://parts_5iwf_user:slTXNbrC851s3IyC0t1Fw8a9aCbDXJuc@dpg-d7pebfnavr4c73enlmfg-a.oregon-postgres.render.com/parts_5iwf"
 
 conn = psycopg2.connect(DATABASE_URL)
 cur = conn.cursor()
@@ -161,8 +161,10 @@ if page == "📊 Price Lookup":
 
         for _, r in input_df.iterrows():
 
-            part = str(r.get("Part No","")).strip().lower()   # ✅ FIX
-            brand = str(r.get("Brand","")).strip().lower()    # ✅ FIX
+            part = str(r.get("Part No","")).strip()
+            part = part.replace(".0","").lower()   # ✅ FIX
+
+            brand = str(r.get("Brand","")).strip().lower()
 
             qty = pd.to_numeric(r.get("Qty"), errors="coerce")
             if pd.isna(qty) or qty <= 0:
@@ -175,7 +177,7 @@ if page == "📊 Price Lookup":
                 cur.execute("""
                     SELECT price, description
                     FROM parts_table
-                    WHERE part_no=%s AND brand=%s   -- ✅ FIX
+                    WHERE part_no=%s AND brand=%s
                     LIMIT 1
                 """, (part, brand))
 
@@ -292,7 +294,8 @@ elif page == "📤 Data Upload":
 
         for f in files:
 
-            df = pd.read_excel(f)
+            df = pd.read_excel(f, dtype=str)   # ✅ FIX
+
             df.columns = df.columns.str.strip().str.lower()
 
             df.rename(columns={
@@ -308,8 +311,11 @@ elif page == "📤 Data Upload":
 
             for _, r in df.iterrows():
 
-                part_no = str(r.get("part_no","")).strip().lower()   # ✅ FIX
-                brand = str(r.get("brand","")).strip().lower()       # ✅ FIX
+                part_no = str(r.get("part_no","")).strip()
+                part_no = part_no.replace(".0","").lower()   # ✅ FIX
+
+                brand = str(r.get("brand","")).strip().lower()
+
                 price = safe_float(r.get("price",""))
                 desc = str(r.get("description","")).strip()
                 moq = safe_int(r.get("moq",""))
