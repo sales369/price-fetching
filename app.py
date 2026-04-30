@@ -172,11 +172,14 @@ if page == "📊 Price Lookup":
             desc = "Not Found"
 
             if part and brand:
+                # ✅ ONLY FIX APPLIED HERE
                 cur.execute("""
                     SELECT price, description
                     FROM parts_table
-                    WHERE LOWER(part_no)=LOWER(%s)
-                    AND LOWER(brand)=LOWER(%s)
+                    WHERE REGEXP_REPLACE(TRIM(LOWER(part_no)), '[^a-z0-9]', '', 'g') =
+                          REGEXP_REPLACE(TRIM(LOWER(%s)), '[^a-z0-9]', '', 'g')
+                    AND REGEXP_REPLACE(TRIM(LOWER(brand)), '[^a-z0-9]', '', 'g') =
+                        REGEXP_REPLACE(TRIM(LOWER(%s)), '[^a-z0-9]', '', 'g')
                     LIMIT 1
                 """, (part, brand))
 
@@ -208,7 +211,7 @@ if page == "📊 Price Lookup":
             conn.commit()
             st.success("Quotation saved successfully")
 
-# ================= SAVED QUOTATIONS (DATE ONLY FIX) =================
+# ================= SAVED QUOTATIONS =================
 elif page == "📁 Saved Quotations":
     set_bg("#f0fff4","#e6fffa")
     st.title("Saved Quotations")
@@ -229,7 +232,7 @@ elif page == "📁 Saved Quotations":
     for offer_id, user, data, date_only in rows:
         df = pd.DataFrame(json.loads(data) if isinstance(data,str) else data)
         df["Employee"] = user
-        df["Saved On"] = date_only   # ✅ ONLY DATE
+        df["Saved On"] = date_only
         df["Offer ID"] = offer_id
         all_data.append(df)
 
@@ -263,37 +266,14 @@ elif page == "📁 Saved Quotations":
             st.rerun()
 
 # ================= UPLOAD =================
-# ================= UPLOAD =================
 elif page == "📤 Data Upload":
     set_bg("#f5f0ff","#ede9fe")
     st.title("Master Data Upload")
 
-    files = st.file_uploader(
-        "Upload Price Sheet",
-        type=["xlsx"],
-        accept_multiple_files=True
-    )
-
-    def safe_float(v):
-        try:
-            if v is None or v == "":
-                return 0
-            return float(v)
-        except:
-            return 0
-
-    def safe_int(v):
-        try:
-            if v is None or v == "":
-                return 0
-            return int(float(v))
-        except:
-            return 0
+    files = st.file_uploader("Upload Price Sheet", type=["xlsx"], accept_multiple_files=True)
 
     if files:
-
         for f in files:
-
             df = pd.read_excel(f)
             df.columns = df.columns.str.strip().str.lower()
 
@@ -304,33 +284,24 @@ elif page == "📤 Data Upload":
                 "moq": "moq"
             }, inplace=True)
 
-            df = df.fillna("")
+            df["moq"] = pd.to_numeric(df.get("moq", 0), errors="coerce").fillna(0)
 
-            values = []
+            values = [
+                (r["part_no"], r["brand"], float(r["price"]), r.get("description",""), int(r["moq"]))
+                for _, r in df.iterrows()
+            ]
 
-            for _, r in df.iterrows():
-
-                part_no = str(r.get("part_no","")).strip()
-                brand = str(r.get("brand","")).strip()
-                price = safe_float(r.get("price",""))
-                desc = str(r.get("description","")).strip()
-                moq = safe_int(r.get("moq",""))
-
-                if part_no and brand:
-                    values.append((part_no, brand, price, desc, moq))
-
-            if values:
-                execute_values(
-                    cur,
-                    "INSERT INTO parts_table (part_no,brand,price,description,moq) VALUES %s",
-                    values
-                )
-                conn.commit()
-
-            st.success(f"{f.name} uploaded successfully")
+            execute_values(
+                cur,
+                "INSERT INTO parts_table (part_no,brand,price,description,moq) VALUES %s",
+                values
+            )
+            conn.commit()
 
         st.cache_data.clear()
+        st.success("Uploaded successfully")
         st.rerun()
+
 # ================= ADMIN =================
 elif page == "🛠 Access Control":
     set_bg("#f3f6ff", "#e8edff")
