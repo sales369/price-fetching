@@ -7,7 +7,7 @@ import json
 from io import BytesIO
 
 # ---------------- DB ----------------
-DATABASE_URL = "postgresql://parts_ty2y_user:6Jiri0NZpiwj60mlHi1P4xBIikFn3A4U@dpg-d7pf3rn7f7vs739ipo7g-a.oregon-postgres.render.com/parts_ty2y"
+DATABASE_URL = "postgresql://${{PGUSER}}:${{POSTGRES_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:5432/${{PGDATABASE}}"
 
 conn = psycopg2.connect(DATABASE_URL)
 cur = conn.cursor()
@@ -161,7 +161,7 @@ if page == "📊 Price Lookup":
 
         for _, r in input_df.iterrows():
 
-            # ✅ FIXED NORMALIZATION
+            # ✅ FIX (normalization)
             part = str(r.get("Part No","")).strip().replace(".0","")
             brand = str(r.get("Brand","")).strip()
 
@@ -200,14 +200,82 @@ if page == "📊 Price Lookup":
     df = st.session_state.table_data
     st.dataframe(df, use_container_width=True)
 
+    if st.button("💾 Save Quotation"):
+        if not df.empty:
+            cur.execute(
+                "INSERT INTO saved_offers (username,data) VALUES (%s,%s)",
+                (username, json.dumps(df.to_dict(orient="records")))
+            )
+            conn.commit()
+            st.success("Quotation saved successfully")
+
+# ================= SAVED QUOTATIONS =================
+elif page == "📁 Saved Quotations":
+    set_bg("#f0fff4","#e6fffa")
+    st.title("Saved Quotations")
+
+    cur.execute("""
+        SELECT id, username, data, created_at::date
+        FROM saved_offers
+        ORDER BY created_at DESC
+    """)
+    rows = cur.fetchall()
+
+    if not rows:
+        st.info("No saved offers")
+        st.stop()
+
+    all_data = []
+
+    for offer_id, user, data, date_only in rows:
+        df = pd.DataFrame(json.loads(data) if isinstance(data,str) else data)
+        df["Employee"] = user
+        df["Saved On"] = date_only
+        df["Offer ID"] = offer_id
+        all_data.append(df)
+
+    final_df = pd.concat(all_data, ignore_index=True)
+
+    employees = ["All"] + sorted(final_df["Employee"].unique())
+    selected_emp = st.selectbox("Filter by Employee", employees)
+
+    if selected_emp != "All":
+        final_df = final_df[final_df["Employee"] == selected_emp]
+
+    final_df.insert(0, "Select", False)
+
+    edited_df = st.data_editor(final_df, use_container_width=True, height=350)
+
+    output = BytesIO()
+    final_df.to_excel(output, index=False)
+    output.seek(0)
+
+    st.download_button("⬇ Download Excel", output, file_name="saved_offers.xlsx")
+
+    st.markdown("---")
+    if st.button("Delete Selected Quotations"):
+        selected = edited_df[edited_df["Select"] == True]
+
+        if not selected.empty:
+            ids = selected["Offer ID"].unique().tolist()
+            cur.execute("DELETE FROM saved_offers WHERE id = ANY(%s)", (ids,))
+            conn.commit()
+            st.success("Deleted successfully")
+            st.rerun()
+
 # ================= UPLOAD =================
 elif page == "📤 Data Upload":
     set_bg("#f5f0ff","#ede9fe")
     st.title("Master Data Upload")
 
-    files = st.file_uploader("Upload Price Sheet", type=["xlsx"], accept_multiple_files=True)
+    files = st.file_uploader(
+        "Upload Price Sheet",
+        type=["xlsx"],
+        accept_multiple_files=True
+    )
 
     if files:
+
         for f in files:
 
             # ✅ FAST + FIX
@@ -224,7 +292,7 @@ elif page == "📤 Data Upload":
 
             df = df.fillna("")
 
-            # ✅ NORMALIZATION
+            # ✅ NORMALIZATION FIX
             df["part_no"] = df["part_no"].str.strip().str.replace(".0","", regex=False)
             df["brand"] = df["brand"].str.strip()
 
@@ -242,6 +310,7 @@ elif page == "📤 Data Upload":
             )
 
             conn.commit()
+
             st.success(f"{f.name} uploaded successfully")
 
         st.cache_data.clear()
@@ -260,7 +329,21 @@ elif page == "🛠 Access Control":
         conn.commit()
         st.success("User Created")
 
-    # ✅ REMOVE USER
+    current = st.text_input("Current Password", type="password")
+    new_pass = st.text_input("New Password", type="password")
+
+    if st.button("Update Password"):
+        cur.execute("SELECT password FROM users WHERE username='admin'")
+        real = cur.fetchone()[0]
+
+        if current == real:
+            cur.execute("UPDATE users SET password=%s WHERE username='admin'", (new_pass,))
+            conn.commit()
+            st.success("Updated")
+        else:
+            st.error("Wrong password")
+
+    # ✅ REMOVE USER (added, nothing else changed)
     st.markdown("---")
     st.subheader("Remove Employee")
 
