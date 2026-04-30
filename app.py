@@ -161,8 +161,8 @@ if page == "📊 Price Lookup":
 
         for _, r in input_df.iterrows():
 
-            part = str(r.get("Part No","")).strip()
-            brand = str(r.get("Brand","")).strip()
+            part = str(r.get("Part No","")).strip().lower()   # ✅ FIX
+            brand = str(r.get("Brand","")).strip().lower()    # ✅ FIX
 
             qty = pd.to_numeric(r.get("Qty"), errors="coerce")
             if pd.isna(qty) or qty <= 0:
@@ -175,8 +175,7 @@ if page == "📊 Price Lookup":
                 cur.execute("""
                     SELECT price, description
                     FROM parts_table
-                    WHERE LOWER(part_no)=LOWER(%s)
-                    AND LOWER(brand)=LOWER(%s)
+                    WHERE part_no=%s AND brand=%s   -- ✅ FIX
                     LIMIT 1
                 """, (part, brand))
 
@@ -208,7 +207,7 @@ if page == "📊 Price Lookup":
             conn.commit()
             st.success("Quotation saved successfully")
 
-# ================= SAVED QUOTATIONS (DATE ONLY FIX) =================
+# ================= SAVED QUOTATIONS =================
 elif page == "📁 Saved Quotations":
     set_bg("#f0fff4","#e6fffa")
     st.title("Saved Quotations")
@@ -229,7 +228,7 @@ elif page == "📁 Saved Quotations":
     for offer_id, user, data, date_only in rows:
         df = pd.DataFrame(json.loads(data) if isinstance(data,str) else data)
         df["Employee"] = user
-        df["Saved On"] = date_only   # ✅ ONLY DATE
+        df["Saved On"] = date_only
         df["Offer ID"] = offer_id
         all_data.append(df)
 
@@ -262,7 +261,6 @@ elif page == "📁 Saved Quotations":
             st.success("Deleted successfully")
             st.rerun()
 
-# ================= UPLOAD =================
 # ================= UPLOAD =================
 elif page == "📤 Data Upload":
     set_bg("#f5f0ff","#ede9fe")
@@ -310,8 +308,8 @@ elif page == "📤 Data Upload":
 
             for _, r in df.iterrows():
 
-                part_no = str(r.get("part_no","")).strip()
-                brand = str(r.get("brand","")).strip()
+                part_no = str(r.get("part_no","")).strip().lower()   # ✅ FIX
+                brand = str(r.get("brand","")).strip().lower()       # ✅ FIX
                 price = safe_float(r.get("price",""))
                 desc = str(r.get("description","")).strip()
                 moq = safe_int(r.get("moq",""))
@@ -331,6 +329,7 @@ elif page == "📤 Data Upload":
 
         st.cache_data.clear()
         st.rerun()
+
 # ================= ADMIN =================
 elif page == "🛠 Access Control":
     set_bg("#f3f6ff", "#e8edff")
