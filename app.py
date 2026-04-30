@@ -19,9 +19,6 @@ st.markdown("""
 section[data-testid="stSidebar"] {
     width: 280px !important;
 }
-section[data-testid="stSidebar"] > div {
-    width: 280px !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -30,8 +27,7 @@ def set_bg(c1, c2):
     st.markdown(f"""
     <style>
     .stApp {{
-        background: linear-gradient(135deg, {c1} 0%, {c2} 100%);
-        background-attachment: fixed;
+        background: linear-gradient(135deg, {c1}, {c2});
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -47,29 +43,6 @@ CREATE TABLE IF NOT EXISTS parts_table (
     moq INTEGER
 );
 """)
-
-# UNIQUE constraint
-try:
-    cur.execute("""
-        ALTER TABLE parts_table
-        ADD CONSTRAINT unique_part_brand UNIQUE (part_no, brand);
-    """)
-    conn.commit()
-except:
-    conn.rollback()
-
-# cleanup duplicates
-try:
-    cur.execute("""
-    DELETE FROM parts_table a
-    USING parts_table b
-    WHERE a.id < b.id
-    AND a.part_no = b.part_no
-    AND a.brand = b.brand;
-    """)
-    conn.commit()
-except:
-    conn.rollback()
 
 cur.execute("""
 CREATE TABLE IF NOT EXISTS users (
@@ -96,6 +69,27 @@ WHERE NOT EXISTS (SELECT 1 FROM users WHERE username='admin')
 
 conn.commit()
 
+# ---------------- DB SETUP (RUN ONCE) ----------------
+def setup_database():
+    try:
+        cur.execute("""
+            ALTER TABLE parts_table
+            ADD CONSTRAINT unique_part_brand UNIQUE (part_no, brand);
+        """)
+        conn.commit()
+    except:
+        conn.rollback()
+
+    try:
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_parts ON parts_table(part_no, brand);")
+        conn.commit()
+    except:
+        conn.rollback()
+
+if "db_setup_done" not in st.session_state:
+    setup_database()
+    st.session_state.db_setup_done = True
+
 # ---------------- CACHE ----------------
 @st.cache_data
 def load_brands():
@@ -120,18 +114,16 @@ def login(u,p):
     return cur.fetchone()
 
 if st.session_state.user is None:
-    st.markdown("<style>section[data-testid='stSidebar']{display:none;}</style>", unsafe_allow_html=True)
     set_bg("#eef4ff","#f8fbff")
 
     col1,col2,col3 = st.columns([1,2,1])
     with col2:
-        st.image("logo.png", width=160)
         st.markdown("### 👤 Sign In")
 
-        u = st.text_input("Enter Username")
-        p = st.text_input("Enter Password", type="password")
+        u = st.text_input("Username")
+        p = st.text_input("Password", type="password")
 
-        if st.button("Click me to Continue"):
+        if st.button("Login"):
             if login(u,p):
                 st.session_state.user = {"username":u}
                 st.rerun()
@@ -144,7 +136,6 @@ username = st.session_state.user["username"]
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
-    st.image("logo.png", width=140)
     st.markdown(f"### 👤 {username}")
 
     if username == "admin":
@@ -154,16 +145,13 @@ with st.sidebar:
 
     page = st.radio("WorkSpace", pages)
 
-    st.markdown("---")
-
     if st.button("Logout"):
         st.session_state.clear()
         st.rerun()
 
 # ================= PRICE LOOKUP =================
 if page == "📊 Price Lookup":
-    set_bg("#f0f7ff","#e6f0ff")
-    st.title("Price Lookup Panel")
+    st.title("Price Lookup")
 
     brand_list = load_brands()
 
@@ -172,12 +160,11 @@ if page == "📊 Price Lookup":
         num_rows="dynamic",
         use_container_width=True,
         column_config={
-            "Brand": st.column_config.SelectboxColumn("Brand", options=brand_list)
+            "Brand": st.column_config.SelectboxColumn(options=brand_list)
         }
     )
 
     if st.button("Get Pricing"):
-
         result = []
 
         for _, r in input_df.iterrows():
@@ -199,9 +186,9 @@ if page == "📊 Price Lookup":
                     LIMIT 1
                 """, (part, brand))
 
-                match = cur.fetchone()
-                if match:
-                    price, desc = match
+                row = cur.fetchone()
+                if row:
+                    price, desc = row
 
             result.append({
                 "Brand": brand,
@@ -218,10 +205,9 @@ if page == "📊 Price Lookup":
 
 # ================= UPLOAD =================
 elif page == "📤 Data Upload":
-    set_bg("#f5f0ff","#ede9fe")
-    st.title("Master Data Upload")
+    st.title("Upload Price Data")
 
-    files = st.file_uploader("Upload Price Sheet", type=["xlsx"], accept_multiple_files=True)
+    files = st.file_uploader("Upload Excel", type=["xlsx"], accept_multiple_files=True)
 
     if files:
         for f in files:
@@ -238,20 +224,19 @@ elif page == "📤 Data Upload":
 
             df = df.fillna("")
 
-            df["part_no"] = df["part_no"].astype(str).str.strip().str.replace(".0","", regex=False).str.lower()
-            df["brand"] = df["brand"].astype(str).str.strip().str.lower()
-            df["description"] = df["description"].astype(str).str.strip()
+            df["part_no"] = df["part_no"].str.strip().str.replace(".0","", regex=False).str.lower()
+            df["brand"] = df["brand"].str.strip().str.lower()
+            df["description"] = df["description"].str.strip()
 
             df["price"] = pd.to_numeric(df["price"], errors="coerce").fillna(0)
             df["moq"] = pd.to_numeric(df["moq"], errors="coerce").fillna(0).astype(int)
 
-            df = df[(df["part_no"] != "") & (df["brand"] != "")]
+            df = df[(df["part_no"]!="") & (df["brand"]!="")]
 
             values = list(df[["part_no","brand","price","description","moq"]].itertuples(index=False, name=None))
 
-            chunk_size = 5000
-            for i in range(0, len(values), chunk_size):
-                chunk = values[i:i+chunk_size]
+            for i in range(0, len(values), 5000):
+                chunk = values[i:i+5000]
 
                 execute_values(
                     cur,
@@ -272,16 +257,15 @@ elif page == "📤 Data Upload":
                 )
 
             conn.commit()
-            st.success(f"{f.name} uploaded successfully")
+            st.success(f"{f.name} uploaded")
 
 # ================= ADMIN =================
 elif page == "🛠 Access Control":
-    set_bg("#f3f6ff","#e8edff")
-    st.title("User & Access Control")
+    st.title("User Management")
 
-    # create user
-    u = st.text_input("Username")
-    p = st.text_input("Password", type="password")
+    # Create user
+    u = st.text_input("New Username")
+    p = st.text_input("New Password", type="password")
 
     if st.button("Create User"):
         cur.execute("INSERT INTO users (username,password) VALUES (%s,%s)",(u,p))
@@ -290,22 +274,18 @@ elif page == "🛠 Access Control":
 
     st.markdown("---")
 
-    # 🔥 REMOVE EMPLOYEE FEATURE
-    st.subheader("Remove Employee")
-
-    cur.execute("SELECT username FROM users WHERE username != 'admin'")
+    # Remove user
+    cur.execute("SELECT username FROM users WHERE username!='admin'")
     users = [x[0] for x in cur.fetchall()]
 
     if users:
-        user_to_delete = st.selectbox("Select Employee", users)
+        user_del = st.selectbox("Remove Employee", users)
 
         if st.button("Delete Employee"):
-            if user_to_delete == username:
-                st.error("You cannot delete yourself")
+            if user_del == username:
+                st.error("Cannot delete yourself")
             else:
-                cur.execute("DELETE FROM users WHERE username=%s", (user_to_delete,))
+                cur.execute("DELETE FROM users WHERE username=%s",(user_del,))
                 conn.commit()
-                st.success(f"{user_to_delete} removed successfully")
+                st.success("User removed")
                 st.rerun()
-    else:
-        st.info("No employees to delete")
