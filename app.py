@@ -8,7 +8,7 @@ from io import BytesIO
 import os
 
 # ---------------- DB ----------------
-DATABASE_URL = os.getenv("postgresql://postgres:zseNcYizGghWXKKXfHMiNCsNfFgZJvtg@postgres.railway.internal:5432/railway")
+DATABASE_URL = os.getenv("postgresql://postgres:zseNcYizGghWXKKXfHMiNCsNfFgZJvtg@switchback.proxy.rlwy.net:59367/railway")
 
 conn = psycopg2.connect(DATABASE_URL, sslmode="require")
 cur = conn.cursor()
