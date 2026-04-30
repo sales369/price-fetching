@@ -7,7 +7,7 @@ import json
 from io import BytesIO
 
 # ---------------- DB ----------------
-DATABASE_URL = "postgresql://parts_u05e_user:YSFdKnBNUWHnXNWDFsjjQzZRcwjMsuT8@dpg-d7ounb9o3t8c7389euf0-a.oregon-postgres.render.com/parts_u05e"
+DATABASE_URL = "postgresql://${{PGUSER}}:${{POSTGRES_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:5432/${{PGDATABASE}}"
 
 conn = psycopg2.connect(DATABASE_URL)
 cur = conn.cursor()
