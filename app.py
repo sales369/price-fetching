@@ -5,12 +5,11 @@ from psycopg2.extras import execute_values
 import re
 import json
 from io import BytesIO
-import os
 
 # ---------------- DB ----------------
-DATABASE_URL = os.getenv("postgresql://postgres:zseNcYizGghWXKKXfHMiNCsNfFgZJvtg@switchback.proxy.rlwy.net:59367/railway")
+DATABASE_URL = "postgresql://parts_u05e_user:YSFdKnBNUWHnXNWDFsjjQzZRcwjMsuT8@dpg-d7ounb9o3t8c7389euf0-a.oregon-postgres.render.com/parts_u05e"
 
-conn = psycopg2.connect(DATABASE_URL, sslmode="require")
+conn = psycopg2.connect(DATABASE_URL)
 cur = conn.cursor()
 
 st.set_page_config(layout="wide")
@@ -82,7 +81,7 @@ def load_brands():
 
 # ---------------- SESSION ----------------
 if "table_data" not in st.session_state:
-    st.session_state.table_data = pd.DataFrame([
+    st.session_state.table_data = pd.DataFrame(columns=[
         "Brand","Part No","Description","Qty","Price","Amount"
     ])
 
@@ -209,7 +208,7 @@ if page == "📊 Price Lookup":
             conn.commit()
             st.success("Quotation saved successfully")
 
-# ================= SAVED QUOTATIONS =================
+# ================= SAVED QUOTATIONS (DATE ONLY FIX) =================
 elif page == "📁 Saved Quotations":
     set_bg("#f0fff4","#e6fffa")
     st.title("Saved Quotations")
@@ -230,7 +229,7 @@ elif page == "📁 Saved Quotations":
     for offer_id, user, data, date_only in rows:
         df = pd.DataFrame(json.loads(data) if isinstance(data,str) else data)
         df["Employee"] = user
-        df["Saved On"] = date_only
+        df["Saved On"] = date_only   # ✅ ONLY DATE
         df["Offer ID"] = offer_id
         all_data.append(df)
 
@@ -263,6 +262,7 @@ elif page == "📁 Saved Quotations":
             st.success("Deleted successfully")
             st.rerun()
 
+# ================= UPLOAD =================
 # ================= UPLOAD =================
 elif page == "📤 Data Upload":
     set_bg("#f5f0ff","#ede9fe")
@@ -331,7 +331,6 @@ elif page == "📤 Data Upload":
 
         st.cache_data.clear()
         st.rerun()
-
 # ================= ADMIN =================
 elif page == "🛠 Access Control":
     set_bg("#f3f6ff", "#e8edff")
