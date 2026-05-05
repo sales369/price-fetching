@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import psycopg2
 from psycopg2.extras import execute_values
-import re
 import json
 from io import BytesIO
 
@@ -14,6 +13,7 @@ cur = conn.cursor()
 
 st.set_page_config(layout="wide")
 
+# ---------------- UI FIX ----------------
 st.markdown("""
 <style>
 section[data-testid="stSidebar"] {
@@ -42,9 +42,8 @@ CREATE TABLE IF NOT EXISTS parts_table (
     id SERIAL PRIMARY KEY,
     part_no TEXT,
     brand TEXT,
-    price NUMERIC,
-    description TEXT,
-    moq INTEGER
+    supplier TEXT,
+    price NUMERIC
 );
 """)
 
@@ -65,6 +64,19 @@ CREATE TABLE IF NOT EXISTS saved_offers (
 );
 """)
 
+# UNIQUE constraint for multi-supplier
+cur.execute("""
+DO $$
+BEGIN
+IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'unique_part_supplier'
+) THEN
+    ALTER TABLE parts_table
+    ADD CONSTRAINT unique_part_supplier UNIQUE (part_no, brand, supplier);
+END IF;
+END$$;
+""")
+
 cur.execute("""
 INSERT INTO users (username,password)
 SELECT 'admin','admin'
@@ -74,15 +86,17 @@ WHERE NOT EXISTS (SELECT 1 FROM users WHERE username='admin')
 conn.commit()
 
 # ---------------- CACHE ----------------
-@st.cache_data
 def load_brands():
+    if "brands" in st.session_state:
+        return st.session_state["brands"]
+
     cur.execute("SELECT DISTINCT brand FROM parts_table ORDER BY brand")
     return [x[0] for x in cur.fetchall()]
 
 # ---------------- SESSION ----------------
 if "table_data" not in st.session_state:
     st.session_state.table_data = pd.DataFrame(columns=[
-        "Brand","Part No","Description","Qty","Price","Amount"
+        "Brand","Part No","Supplier","Qty","Price","Amount"
     ])
 
 if "input_table" not in st.session_state:
@@ -161,39 +175,41 @@ if page == "📊 Price Lookup":
 
         for _, r in input_df.iterrows():
 
-            # ✅ FIX (normalization)
-            part = str(r.get("Part No","")).strip().replace(".0","")
+            part = str(r.get("Part No","")).strip()
             brand = str(r.get("Brand","")).strip()
 
             qty = pd.to_numeric(r.get("Qty"), errors="coerce")
             if pd.isna(qty) or qty <= 0:
                 qty = 1
 
-            price = 0
-            desc = "Not Found"
+            cur.execute("""
+                SELECT supplier, price
+                FROM parts_table
+                WHERE LOWER(part_no)=LOWER(%s)
+                AND LOWER(brand)=LOWER(%s)
+            """, (part, brand))
 
-            if part and brand:
-                cur.execute("""
-                    SELECT price, description
-                    FROM parts_table
-                    WHERE LOWER(part_no)=LOWER(%s)
-                    AND LOWER(brand)=LOWER(%s)
-                    LIMIT 1
-                """, (part, brand))
+            matches = cur.fetchall()
 
-                match = cur.fetchone()
-
-                if match:
-                    price, desc = match
-
-            result.append({
-                "Brand": brand,
-                "Part No": part,
-                "Description": desc,
-                "Qty": qty,
-                "Price": float(price),
-                "Amount": qty * float(price)
-            })
+            if matches:
+                for supplier, price in matches:
+                    result.append({
+                        "Brand": brand,
+                        "Part No": part,
+                        "Supplier": supplier,
+                        "Qty": qty,
+                        "Price": float(price),
+                        "Amount": qty * float(price)
+                    })
+            else:
+                result.append({
+                    "Brand": brand,
+                    "Part No": part,
+                    "Supplier": "Not Found",
+                    "Qty": qty,
+                    "Price": 0,
+                    "Amount": 0
+                })
 
         st.session_state.table_data = pd.DataFrame(result)
 
@@ -209,7 +225,7 @@ if page == "📊 Price Lookup":
             conn.commit()
             st.success("Quotation saved successfully")
 
-# ================= SAVED QUOTATIONS =================
+# ================= SAVED =================
 elif page == "📁 Saved Quotations":
     set_bg("#f0fff4","#e6fffa")
     st.title("Saved Quotations")
@@ -236,15 +252,9 @@ elif page == "📁 Saved Quotations":
 
     final_df = pd.concat(all_data, ignore_index=True)
 
-    employees = ["All"] + sorted(final_df["Employee"].unique())
-    selected_emp = st.selectbox("Filter by Employee", employees)
-
-    if selected_emp != "All":
-        final_df = final_df[final_df["Employee"] == selected_emp]
-
     final_df.insert(0, "Select", False)
 
-    edited_df = st.data_editor(final_df, use_container_width=True, height=350)
+    edited_df = st.data_editor(final_df, use_container_width=True)
 
     output = BytesIO()
     final_df.to_excel(output, index=False)
@@ -252,15 +262,12 @@ elif page == "📁 Saved Quotations":
 
     st.download_button("⬇ Download Excel", output, file_name="saved_offers.xlsx")
 
-    st.markdown("---")
     if st.button("Delete Selected Quotations"):
         selected = edited_df[edited_df["Select"] == True]
-
         if not selected.empty:
             ids = selected["Offer ID"].unique().tolist()
             cur.execute("DELETE FROM saved_offers WHERE id = ANY(%s)", (ids,))
             conn.commit()
-            st.success("Deleted successfully")
             st.rerun()
 
 # ================= UPLOAD =================
@@ -268,52 +275,48 @@ elif page == "📤 Data Upload":
     set_bg("#f5f0ff","#ede9fe")
     st.title("Master Data Upload")
 
-    files = st.file_uploader(
-        "Upload Price Sheet",
-        type=["xlsx"],
-        accept_multiple_files=True
-    )
+    file = st.file_uploader("Upload Price Sheet", type=["xlsx"])
 
-    if files:
+    if file:
+        df = pd.read_excel(file, dtype=str)
 
-        for f in files:
+        df.columns = df.columns.str.strip().str.lower()
 
-            # ✅ FAST + FIX
-            df = pd.read_excel(f, dtype=str)
+        df.rename(columns={
+            "make": "brand",
+            "part number": "part_no",
+            "jpy price": "price",
+            "supplier": "supplier"
+        }, inplace=True)
 
-            df.columns = df.columns.str.strip().str.lower()
+        df["brand"] = df["brand"].str.replace(r'[\n"]', '', regex=True).str.strip()
+        df["part_no"] = df["part_no"].str.replace(r'[\n"]', '', regex=True).str.strip()
+        df["supplier"] = df["supplier"].str.strip()
 
-            df.rename(columns={
-                "part no": "part_no",
-                "price [eur]": "price",
-                "item description": "description",
-                "moq": "moq"
-            }, inplace=True)
+        df["price"] = pd.to_numeric(df["price"], errors="coerce").fillna(0)
 
-            df = df.fillna("")
+        df = df[(df["part_no"] != "") & (df["brand"] != "") & (df["supplier"] != "")]
 
-            # ✅ NORMALIZATION FIX
-            df["part_no"] = df["part_no"].str.strip().str.replace(".0","", regex=False)
-            df["brand"] = df["brand"].str.strip()
+        # 🔥 STORE BRANDS FOR DROPDOWN
+        st.session_state["brands"] = sorted(df["brand"].unique().tolist())
 
-            df["price"] = pd.to_numeric(df["price"], errors="coerce").fillna(0)
-            df["moq"] = pd.to_numeric(df["moq"], errors="coerce").fillna(0).astype(int)
+        values = list(df[["part_no","brand","price","supplier"]]
+                      .itertuples(index=False, name=None))
 
-            df = df[(df["part_no"] != "") & (df["brand"] != "")]
+        execute_values(
+            cur,
+            """
+            INSERT INTO parts_table (part_no,brand,price,supplier)
+            VALUES %s
+            ON CONFLICT (part_no, brand, supplier)
+            DO UPDATE SET price = EXCLUDED.price
+            """,
+            values
+        )
 
-            values = list(df[["part_no","brand","price","description","moq"]].itertuples(index=False, name=None))
+        conn.commit()
 
-            execute_values(
-                cur,
-                "INSERT INTO parts_table (part_no,brand,price,description,moq) VALUES %s",
-                values
-            )
-
-            conn.commit()
-
-            st.success(f"{f.name} uploaded successfully")
-
-        st.cache_data.clear()
+        st.success("File uploaded successfully")
         st.rerun()
 
 # ================= ADMIN =================
@@ -329,24 +332,6 @@ elif page == "🛠 Access Control":
         conn.commit()
         st.success("User Created")
 
-    current = st.text_input("Current Password", type="password")
-    new_pass = st.text_input("New Password", type="password")
-
-    if st.button("Update Password"):
-        cur.execute("SELECT password FROM users WHERE username='admin'")
-        real = cur.fetchone()[0]
-
-        if current == real:
-            cur.execute("UPDATE users SET password=%s WHERE username='admin'", (new_pass,))
-            conn.commit()
-            st.success("Updated")
-        else:
-            st.error("Wrong password")
-
-    # ✅ REMOVE USER (added, nothing else changed)
-    st.markdown("---")
-    st.subheader("Remove Employee")
-
     cur.execute("SELECT username FROM users WHERE username != 'admin'")
     users = [x[0] for x in cur.fetchall()]
 
@@ -354,10 +339,6 @@ elif page == "🛠 Access Control":
         user_to_delete = st.selectbox("Select Employee", users)
 
         if st.button("Delete Employee"):
-            if user_to_delete == username:
-                st.error("You cannot delete yourself")
-            else:
-                cur.execute("DELETE FROM users WHERE username=%s", (user_to_delete,))
-                conn.commit()
-                st.success(f"{user_to_delete} removed successfully")
-                st.rerun()
+            cur.execute("DELETE FROM users WHERE username=%s", (user_to_delete,))
+            conn.commit()
+            st.rerun()
