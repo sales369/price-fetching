@@ -7,7 +7,7 @@ from io import BytesIO
 import os
 
 # ---------------- DB (SECURE) ----------------
-DATABASE_URL = os.getenv("postgresql://parts_pduk_user:6qP43zr8uM8lQKFhP4Gcoc0PmUgJrwB3@dpg-d7smnn5ckfvc73cj6ifg-a.oregon-postgres.render.com/parts_pduk")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # ✅ safety check
 if not DATABASE_URL:
