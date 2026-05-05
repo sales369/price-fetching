@@ -4,16 +4,22 @@ import psycopg2
 from psycopg2.extras import execute_values
 import json
 from io import BytesIO
+import os
 
-# ---------------- DB ----------------
-DATABASE_URL = "postgresql://parts_ty2y_user:6Jiri0NZpiwj60mlHi1P4xBIikFn3A4U@dpg-d7pf3rn7f7vs739ipo7g-a.oregon-postgres.render.com/parts_ty2y"
+# ---------------- DB (SECURE) ----------------
+DATABASE_URL = os.getenv("postgresql://parts_pduk_user:6qP43zr8uM8lQKFhP4Gcoc0PmUgJrwB3@dpg-d7smnn5ckfvc73cj6ifg-a.oregon-postgres.render.com/parts_pduk")
+
+# ✅ safety check
+if not DATABASE_URL:
+    st.error("❌ DATABASE_URL not set. Please configure it in environment variables.")
+    st.stop()
 
 conn = psycopg2.connect(DATABASE_URL)
 cur = conn.cursor()
 
 st.set_page_config(layout="wide")
 
-# ---------------- UI FIX ----------------
+# ---------------- UI ----------------
 st.markdown("""
 <style>
 section[data-testid="stSidebar"] {
@@ -42,9 +48,27 @@ CREATE TABLE IF NOT EXISTS parts_table (
     id SERIAL PRIMARY KEY,
     part_no TEXT,
     brand TEXT,
-    supplier TEXT,
     price NUMERIC
 );
+""")
+
+# ✅ ensure supplier column exists
+cur.execute("""
+ALTER TABLE parts_table
+ADD COLUMN IF NOT EXISTS supplier TEXT;
+""")
+
+# ✅ unique constraint safely
+cur.execute("""
+DO $$
+BEGIN
+IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'unique_part_supplier'
+) THEN
+    ALTER TABLE parts_table
+    ADD CONSTRAINT unique_part_supplier UNIQUE (part_no, brand, supplier);
+END IF;
+END$$;
 """)
 
 cur.execute("""
@@ -64,19 +88,6 @@ CREATE TABLE IF NOT EXISTS saved_offers (
 );
 """)
 
-# UNIQUE constraint for multi-supplier
-cur.execute("""
-DO $$
-BEGIN
-IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'unique_part_supplier'
-) THEN
-    ALTER TABLE parts_table
-    ADD CONSTRAINT unique_part_supplier UNIQUE (part_no, brand, supplier);
-END IF;
-END$$;
-""")
-
 cur.execute("""
 INSERT INTO users (username,password)
 SELECT 'admin','admin'
@@ -85,7 +96,7 @@ WHERE NOT EXISTS (SELECT 1 FROM users WHERE username='admin')
 
 conn.commit()
 
-# ---------------- CACHE ----------------
+# ---------------- BRAND LOADER ----------------
 def load_brands():
     if "brands" in st.session_state:
         return st.session_state["brands"]
@@ -297,7 +308,6 @@ elif page == "📤 Data Upload":
 
         df = df[(df["part_no"] != "") & (df["brand"] != "") & (df["supplier"] != "")]
 
-        # 🔥 STORE BRANDS FOR DROPDOWN
         st.session_state["brands"] = sorted(df["brand"].unique().tolist())
 
         values = list(df[["part_no","brand","price","supplier"]]
