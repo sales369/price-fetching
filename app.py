@@ -95,30 +95,15 @@ section[data-testid="stSidebar"] > div:first-child {
     padding: 0 0 16px 0 !important;
 }
 
-/* ══ Sidebar toggle button — styled, always visible ══ */
-[data-testid="collapsedControl"] {
-    display: flex !important;
-    visibility: visible !important;
-    top: 10px !important;
-    background: white !important;
-    border: 1.5px solid #CBD5E1 !important;
-    border-radius: 11px !important;
-    box-shadow: 0 2px 14px rgba(30,64,175,0.14) !important;
-    width: 40px !important;
-    height: 40px !important;
-    align-items: center !important;
-    justify-content: center !important;
-    z-index: 99999 !important;
-    transition: box-shadow 0.2s !important;
-}
-[data-testid="collapsedControl"]:hover {
-    box-shadow: 0 4px 22px rgba(30,64,175,0.28) !important;
-    background: #EFF6FF !important;
-}
-[data-testid="collapsedControl"] svg {
-    color: #1E40AF !important;
-    fill: #1E40AF !important;
-    stroke: #1E40AF !important;
+/* ══ Hide collapse button — sidebar is always visible ══ */
+[data-testid="collapsedControl"],
+button[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapseButton"],
+button[aria-label="Close sidebar"],
+button[aria-label="Collapse sidebar"] {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
 }
 
 /* ══ All sidebar buttons: flat nav style ══ */
