@@ -9,13 +9,13 @@ import os
 import re
 
 # ─────────────────────────────────────────────
-#  PAGE CONFIG  — collapse native sidebar; we build our own
+#  PAGE CONFIG
 # ─────────────────────────────────────────────
 st.set_page_config(
     page_title="PriceDesk",
     page_icon="📋",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # ─────────────────────────────────────────────
@@ -54,22 +54,12 @@ st.markdown("""
     --border:      #CBD5E1;
     --border-lt:   #E2E8F0;
     --card:        rgba(255,255,255,0.82);
-    --sb-w:        252px;
-}
-
-/* ── Hide EVERYTHING native Streamlit sidebar ── */
-section[data-testid="stSidebar"],
-[data-testid="collapsedControl"],
-button[data-testid="collapsedControl"] {
-    display: none !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-    width: 0 !important;
 }
 
 #MainMenu, footer, header { visibility: hidden; }
 * { box-sizing: border-box; }
 
+/* ══ App background ══ */
 .stApp {
     font-family: 'Outfit', sans-serif;
     color: var(--text);
@@ -92,121 +82,75 @@ button[data-testid="collapsedControl"] {
     pointer-events: none; z-index: 0;
 }
 
-/* Main content area — pushed by sidebar */
+/* ══ Native sidebar styling ══ */
+section[data-testid="stSidebar"] {
+    background: rgba(255,255,255,0.97) !important;
+    backdrop-filter: blur(20px) !important;
+    border-right: 1px solid rgba(203,213,225,0.65) !important;
+    box-shadow: 4px 0 32px rgba(30,64,175,0.10) !important;
+    min-width: 260px !important;
+    max-width: 260px !important;
+}
+section[data-testid="stSidebar"] > div:first-child {
+    padding: 0 0 16px 0 !important;
+}
+
+/* ══ All sidebar buttons: flat nav style ══ */
+section[data-testid="stSidebar"] .stButton > button {
+    background: transparent !important;
+    color: #475569 !important;
+    border: 1px solid transparent !important;
+    border-radius: 10px !important;
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    padding: 10px 13px !important;
+    text-align: left !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    transition: background 0.15s, color 0.15s !important;
+    justify-content: flex-start !important;
+    margin-bottom: 2px !important;
+}
+section[data-testid="stSidebar"] .stButton > button:hover {
+    background: #EFF6FF !important;
+    color: #1E40AF !important;
+    transform: none !important;
+    opacity: 1 !important;
+}
+
+/* ══ Main area buttons ══ */
+.block-container .stButton > button {
+    background: linear-gradient(135deg,#1E40AF,#0EA5E9) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-family: 'Outfit', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    padding: 0.5rem 1.3rem !important;
+    box-shadow: 0 3px 12px rgba(30,64,175,0.25) !important;
+    transition: all .2s !important;
+}
+.block-container .stButton > button:hover {
+    opacity: .88 !important;
+    transform: translateY(-1px) !important;
+}
+.stDownloadButton > button {
+    background: linear-gradient(135deg,#059669,#0EA5E9) !important;
+    color: #fff !important; border: none !important; border-radius: 10px !important;
+    font-family: 'Outfit', sans-serif !important; font-weight: 600 !important;
+    font-size: 0.85rem !important;
+}
+
+/* ══ Main content ══ */
 .block-container {
-    padding: 1rem 2rem 3rem !important;
+    padding: 1.5rem 2rem 3rem !important;
     max-width: 100% !important;
     position: relative; z-index: 1;
-    transition: padding-left 0.32s cubic-bezier(0.4,0,0.2,1);
 }
 
-/* ════════════════════════════════════════
-   CUSTOM SLIDING SIDEBAR
-════════════════════════════════════════ */
-#pd-sidebar {
-    position: fixed;
-    top: 0; left: 0; bottom: 0;
-    width: var(--sb-w);
-    background: rgba(255,255,255,0.97);
-    backdrop-filter: blur(20px);
-    border-right: 1px solid rgba(203,213,225,0.65);
-    box-shadow: 4px 0 32px rgba(30,64,175,0.10);
-    z-index: 9999;
-    display: flex; flex-direction: column;
-    transform: translateX(0);
-    transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
-    overflow-y: auto;
-}
-#pd-sidebar.sb-closed {
-    transform: translateX(calc(0px - var(--sb-w)));
-    box-shadow: none;
-}
-
-/* Hamburger button — always visible */
-#pd-toggle {
-    position: fixed;
-    top: 12px; left: 12px;
-    z-index: 10000;
-    width: 40px; height: 40px;
-    background: white;
-    border: 1.5px solid var(--border);
-    border-radius: 11px;
-    cursor: pointer;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 5px;
-    box-shadow: 0 2px 14px rgba(30,64,175,0.14);
-    transition: left 0.32s cubic-bezier(0.4,0,0.2,1), box-shadow .2s;
-    padding: 0; outline: none;
-}
-#pd-toggle.tog-open { left: calc(var(--sb-w) + 10px); }
-#pd-toggle:hover    { box-shadow: 0 4px 22px rgba(30,64,175,0.24); }
-#pd-toggle .bar {
-    display: block; width: 18px; height: 2.5px;
-    background: var(--primary); border-radius: 2px;
-    transition: transform .25s, opacity .25s;
-}
-
-/* Backdrop for mobile */
-#pd-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(15,23,42,0.22);
-    z-index: 9998;
-    backdrop-filter: blur(2px);
-}
-
-/* ── Sidebar internals ── */
-.sb-logo {
-    padding: 22px 18px 14px;
-    border-bottom: 1px solid var(--border-lt);
-    flex-shrink: 0;
-}
-.sb-brand {
-    font-family: 'Sora', sans-serif;
-    font-size: 1.32rem; font-weight: 800;
-    background: linear-gradient(135deg, #1E40AF, #0EA5E9);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    letter-spacing: -.02em;
-}
-.sb-tagline { font-size: 0.62rem; color: var(--muted-lt); letter-spacing: .08em; text-transform: uppercase; margin-top: 1px; }
-
-.sb-chip {
-    margin: 14px 12px 4px;
-    background: linear-gradient(135deg, #EFF6FF, #E0F2FE);
-    border-radius: 10px; padding: 10px 13px;
-    border: 1px solid var(--primary-mid);
-}
-.sb-chip .chip-lbl { font-size: 0.59rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
-.sb-chip .chip-name { font-size: 0.88rem; font-weight: 700; color: var(--primary); font-family: 'Sora', sans-serif; }
-
-.sb-nav { padding: 10px 10px; flex: 1; }
-.sb-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 13px; border-radius: 10px; margin-bottom: 3px;
-    font-size: 0.88rem; font-weight: 600; color: var(--muted);
-    cursor: pointer; transition: background .15s, color .15s;
-    border: 1px solid transparent; user-select: none;
-}
-.sb-item:hover { background: var(--primary-lt); color: var(--primary); }
-.sb-item.active {
-    background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
-    color: var(--primary); border-color: var(--primary-mid);
-}
-.sb-item .ni { font-size: 1rem; width: 20px; text-align: center; flex-shrink: 0; }
-
-.sb-divider { height: 1px; background: var(--border-lt); margin: 8px 12px; }
-.sb-signout {
-    margin: 0 10px 16px; padding: 10px 13px;
-    background: var(--danger-lt); color: var(--danger);
-    border: 1px solid var(--danger-mid); border-radius: 10px;
-    font-size: 0.83rem; font-weight: 700;
-    cursor: pointer; text-align: center;
-    transition: background .15s; user-select: none;
-}
-.sb-signout:hover { background: #FEE2E2; }
-
-/* ── Cards & layout ── */
+/* ══ Cards ══ */
 .metric-row { display:flex; gap:12px; margin-bottom:1.4rem; flex-wrap:wrap; }
 .metric-card {
     background: var(--card); backdrop-filter: blur(16px);
@@ -251,19 +195,6 @@ button[data-testid="collapsedControl"] {
 .ph-title { font-size:1.4rem!important; margin:0!important; font-family:'Sora',sans-serif!important; font-weight:700!important; }
 .ph-sub   { margin:0; color:var(--muted); font-size:0.77rem; margin-top:3px; }
 
-.stButton>button {
-    background:linear-gradient(135deg,#1E40AF,#0EA5E9)!important;
-    color:#fff!important; border:none!important; border-radius:10px!important;
-    font-family:'Outfit',sans-serif!important; font-weight:600!important;
-    font-size:0.85rem!important; padding:0.5rem 1.3rem!important;
-    box-shadow:0 3px 12px rgba(30,64,175,0.25)!important; transition:all .2s!important;
-}
-.stButton>button:hover { opacity:.88!important; transform:translateY(-1px)!important; }
-.stDownloadButton>button {
-    background:linear-gradient(135deg,#059669,#0EA5E9)!important;
-    color:#fff!important; border:none!important; border-radius:10px!important;
-    font-family:'Outfit',sans-serif!important; font-weight:600!important; font-size:0.85rem!important;
-}
 .stTextInput>div>div>input,
 .stNumberInput>div>div>input,
 .stSelectbox>div>div {
@@ -276,7 +207,7 @@ button[data-testid="collapsedControl"] {
     box-shadow:0 0 0 3px rgba(30,64,175,0.12)!important; background:#fff!important;
 }
 [data-testid="stFileUploader"] {
-    border:2px dashed var(--primary-mid)!important;
+    border:2px dashed #BFDBFE!important;
     border-radius:14px!important; background:rgba(239,246,255,0.7)!important;
 }
 [data-testid="stDataFrame"],[data-testid="stDataEditor"] {
@@ -284,9 +215,9 @@ button[data-testid="collapsedControl"] {
 }
 
 .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:.68rem; font-weight:700; letter-spacing:.05em; margin:2px; }
-.badge-blue  { background:var(--primary-lt); color:var(--primary); border:1px solid var(--primary-mid); }
-.badge-green { background:var(--success-lt); color:var(--success); border:1px solid var(--success-mid); }
-.badge-red   { background:var(--danger-lt);  color:var(--danger);  border:1px solid var(--danger-mid);  }
+.badge-blue  { background:#EFF6FF; color:#1E40AF; border:1px solid #BFDBFE; }
+.badge-green { background:#ECFDF5; color:#059669; border:1px solid #A7F3D0; }
+.badge-red   { background:#FEF2F2; color:#DC2626; border:1px solid #FECACA; }
 .part-col-label { font-size:.65rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding-left:2px; }
 
 /* Login */
@@ -297,8 +228,8 @@ button[data-testid="collapsedControl"] {
 .login-name { font-family:'Sora',sans-serif; font-size:1.7rem; font-weight:800; color:#fff; margin-bottom:4px; }
 .login-tag  { color:rgba(255,255,255,0.75); font-size:.76rem; }
 .login-body { padding:26px 34px 0; }
-.login-hi   { font-family:'Sora',sans-serif; font-size:1rem; font-weight:700; color:var(--text); margin-bottom:3px; }
-.login-sub  { color:var(--muted); font-size:.77rem; margin-bottom:20px; }
+.login-hi   { font-family:'Sora',sans-serif; font-size:1rem; font-weight:700; color:#0F172A; margin-bottom:3px; }
+.login-sub  { color:#475569; font-size:.77rem; margin-bottom:20px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -432,146 +363,79 @@ if st.session_state.user is None:
 
 
 # ─────────────────────────────────────────────
-#  CUSTOM SIDEBAR  (HTML + JS, no Streamlit sidebar)
+#  SIDEBAR  — native st.sidebar (fully reliable, no JS)
 # ─────────────────────────────────────────────
-username   = st.session_state.user["username"]
-is_admin   = (username == "admin")
-cur_page   = st.session_state.page
+username = st.session_state.user["username"]
+is_admin = (username == "admin")
+cur_page = st.session_state.page
+nav_pages = ["Price Lookup","Saved Quotations"] + (["Data Upload","Access Control"] if is_admin else [])
+nav_icons = {"Price Lookup":"📊","Saved Quotations":"📁","Data Upload":"📤","Access Control":"🔐"}
 
-nav_pages  = ["Price Lookup","Saved Quotations"] + (["Data Upload","Access Control"] if is_admin else [])
-nav_icons  = {"Price Lookup":"📊","Saved Quotations":"📁","Data Upload":"📤","Access Control":"🔐"}
+with st.sidebar:
+    # ── Logo ──
+    st.markdown(f"""
+    <div style="padding:22px 18px 14px; border-bottom:1px solid #E2E8F0; margin-bottom:4px;">
+      <div style="font-family:'Sora',sans-serif; font-size:1.28rem; font-weight:800;
+                  background:linear-gradient(135deg,#1E40AF,#0EA5E9);
+                  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+                  background-clip:text; letter-spacing:-.02em;">📋 PriceDesk</div>
+      <div style="font-size:0.6rem; color:#94A3B8; letter-spacing:.09em;
+                  text-transform:uppercase; margin-top:2px;">Parts Pricing Platform</div>
+    </div>
+    <div style="margin:12px 12px 10px; background:linear-gradient(135deg,#EFF6FF,#E0F2FE);
+                border-radius:10px; padding:10px 13px; border:1px solid #BFDBFE;">
+      <div style="font-size:0.58rem; font-weight:700; letter-spacing:.09em;
+                  text-transform:uppercase; color:#475569; margin-bottom:2px;">Logged in as</div>
+      <div style="font-size:0.88rem; font-weight:700; color:#1E40AF;
+                  font-family:'Sora',sans-serif;">{username}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-items_html = "".join(
-    f'<div class="sb-item{" active" if p==cur_page else ""}" '
-    f'onclick="choosePage({json.dumps(p)})">'
-    f'<span class="ni">{nav_icons[p]}</span>{p}</div>'
-    for p in nav_pages
-)
+    # ── Nav items ──
+    for p in nav_pages:
+        icon = nav_icons[p]
+        is_active = (p == cur_page)
+        # Active page gets highlighted background via inline style trick
+        if is_active:
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,#EFF6FF,#DBEAFE);
+                        color:#1E40AF; border:1px solid #BFDBFE; border-radius:10px;
+                        padding:10px 13px; font-size:0.88rem; font-weight:700;
+                        font-family:'Outfit',sans-serif; margin-bottom:2px;
+                        display:flex; align-items:center; gap:8px; cursor:default;">
+              {icon}&nbsp; {p}
+            </div>""", unsafe_allow_html=True)
+        else:
+            if st.button(f"{icon}  {p}", key=f"nav_{p}", use_container_width=True):
+                st.session_state.page = p
+                st.rerun()
 
-st.markdown(f"""
-<div id="pd-sidebar">
-  <div class="sb-logo">
-    <div class="sb-brand">📋 PriceDesk</div>
-    <div class="sb-tagline">Parts Pricing Platform</div>
-  </div>
-  <div class="sb-chip">
-    <div class="chip-lbl">Logged in as</div>
-    <div class="chip-name">{username}</div>
-  </div>
-  <nav class="sb-nav">{items_html}</nav>
-  <div class="sb-divider"></div>
-  <div class="sb-signout" onclick="doSignOut()">⏏&nbsp; Sign Out</div>
-</div>
+    # ── Spacer + divider ──
+    st.markdown("""
+    <div style="height:1px; background:#E2E8F0; margin:16px 0 10px;"></div>
+    """, unsafe_allow_html=True)
 
-<button id="pd-toggle" class="tog-open" onclick="toggleSB()">
-  <span class="bar"></span>
-  <span class="bar"></span>
-  <span class="bar"></span>
-</button>
-<div id="pd-overlay" onclick="closeSB()"></div>
-
-<script>
-(function(){{
-  var SB_W = 252;
-  // All sidebar elements are injected into the parent document via st.markdown (no iframe).
-  // Use `document` directly — st.markdown HTML is part of the main page DOM.
-  var doc = document;
-
-  function getSB()  {{ return doc.getElementById('pd-sidebar'); }}
-  function getTog() {{ return doc.getElementById('pd-toggle'); }}
-  function getOvl() {{ return doc.getElementById('pd-overlay'); }}
-  function getBC()  {{
-    return doc.querySelector('[data-testid="stAppViewBlockContainer"]')
-        || doc.querySelector('.block-container');
-  }}
-
-  function isOpen() {{
-    var sb = getSB();
-    return sb ? !sb.classList.contains('sb-closed') : false;
-  }}
-
-  function openSB() {{
-    var sb=getSB(), tog=getTog(), ovl=getOvl(), bc=getBC();
-    if(sb)  sb.classList.remove('sb-closed');
-    if(tog) tog.classList.add('tog-open');
-    if(ovl) ovl.style.display = 'block';
-    if(bc)  bc.style.paddingLeft = (SB_W+16)+'px';
-  }}
-  function closeSB() {{
-    var sb=getSB(), tog=getTog(), ovl=getOvl(), bc=getBC();
-    if(sb)  sb.classList.add('sb-closed');
-    if(tog) tog.classList.remove('tog-open');
-    if(ovl) ovl.style.display = 'none';
-    if(bc)  bc.style.paddingLeft = '56px';
-  }}
-  window.closeSB = closeSB;
-
-  window.toggleSB = function() {{ isOpen() ? closeSB() : openSB(); }};
-
-  // Set initial state once DOM is ready
-  function initSidebar() {{
-    var sb=getSB(), tog=getTog(), bc=getBC();
-    if(!sb || !tog) {{ setTimeout(initSidebar, 80); return; }}
-    // Start open
-    sb.classList.remove('sb-closed');
-    tog.classList.add('tog-open');
-    if(bc) {{
-      bc.style.transition = 'padding-left 0.32s cubic-bezier(0.4,0,0.2,1)';
-      bc.style.paddingLeft = (SB_W+16)+'px';
-    }}
-  }}
-  setTimeout(initSidebar, 80);
-
-  // Nav page selection — trigger the hidden Streamlit selectbox
-  window.choosePage = function(pageName) {{
-    var sels = doc.querySelectorAll('select');
-    for(var s=0; s<sels.length; s++) {{
-      var sel = sels[s];
-      for(var i=0; i<sel.options.length; i++) {{
-        if(sel.options[i].text.trim() === pageName) {{
-          // Set value via native setter to trigger React's onChange
-          var setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set;
-          setter.call(sel, sel.options[i].value);
-          sel.dispatchEvent(new Event('change', {{bubbles:true}}));
-          sel.dispatchEvent(new Event('input',  {{bubbles:true}}));
-          return;
-        }}
-      }}
-    }}
-  }};
-
-  // Sign out — click the hidden __SIGNOUT__ button
-  window.doSignOut = function() {{
-    var btns = doc.querySelectorAll('button');
-    for(var i=0; i<btns.length; i++) {{
-      if(btns[i].innerText && btns[i].innerText.trim() === '__SIGNOUT__') {{
-        btns[i].click(); return;
-      }}
-    }}
-  }};
-}})();
-</script>
-""", unsafe_allow_html=True)
-
-# ── Hidden Streamlit controls for nav & sign-out ──
-with st.container():
-    st.markdown("<div style='position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;'>", unsafe_allow_html=True)
-    nav_sel = st.selectbox("__nav__", nav_pages,
-                           index=nav_pages.index(cur_page),
-                           key="__nav_sel__",
-                           label_visibility="collapsed")
-    so_btn  = st.button("__SIGNOUT__", key="__so__")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-if so_btn:
-    st.session_state.clear(); st.rerun()
-if nav_sel != cur_page:
-    st.session_state.page = nav_sel; st.rerun()
+    # ── Sign out — red styled ──
+    st.markdown("""
+    <style>
+    /* Target the very last stButton inside sidebar for sign-out red styling */
+    section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div:last-child .stButton > button {
+        background: #FEF2F2 !important;
+        color: #DC2626 !important;
+        border: 1px solid #FECACA !important;
+        font-weight: 700 !important;
+    }
+    section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div:last-child .stButton > button:hover {
+        background: #FEE2E2 !important;
+        color: #DC2626 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    if st.button("⏏  Sign Out", key="signout_btn", use_container_width=True):
+        st.session_state.clear()
+        st.rerun()
 
 page = st.session_state.page
-
-# Top spacer (hamburger button height)
-st.markdown("<div style='height:50px'></div>", unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════
