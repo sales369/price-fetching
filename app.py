@@ -473,69 +473,81 @@ st.markdown(f"""
 <script>
 (function(){{
   var SB_W = 252;
+  // All sidebar elements are injected into the parent document via st.markdown (no iframe).
+  // Use `document` directly — st.markdown HTML is part of the main page DOM.
+  var doc = document;
 
-  function getSB()  {{ return document.getElementById('pd-sidebar'); }}
-  function getTog() {{ return document.getElementById('pd-toggle'); }}
-  function getOvl() {{ return document.getElementById('pd-overlay'); }}
+  function getSB()  {{ return doc.getElementById('pd-sidebar'); }}
+  function getTog() {{ return doc.getElementById('pd-toggle'); }}
+  function getOvl() {{ return doc.getElementById('pd-overlay'); }}
   function getBC()  {{
-    return window.parent.document.querySelector('.block-container')
-        || window.parent.document.querySelector('[data-testid="stAppViewBlockContainer"]');
+    return doc.querySelector('[data-testid="stAppViewBlockContainer"]')
+        || doc.querySelector('.block-container');
   }}
 
-  function isOpen() {{ return !getSB().classList.contains('sb-closed'); }}
+  function isOpen() {{
+    var sb = getSB();
+    return sb ? !sb.classList.contains('sb-closed') : false;
+  }}
 
   function openSB() {{
-    getSB().classList.remove('sb-closed');
-    getTog().classList.add('tog-open');
-    getOvl().style.display = 'block';
-    var bc = getBC(); if(bc) bc.style.paddingLeft = (SB_W+16)+'px';
+    var sb=getSB(), tog=getTog(), ovl=getOvl(), bc=getBC();
+    if(sb)  sb.classList.remove('sb-closed');
+    if(tog) tog.classList.add('tog-open');
+    if(ovl) ovl.style.display = 'block';
+    if(bc)  bc.style.paddingLeft = (SB_W+16)+'px';
   }}
   function closeSB() {{
-    getSB().classList.add('sb-closed');
-    getTog().classList.remove('tog-open');
-    getOvl().style.display = 'none';
-    var bc = getBC(); if(bc) bc.style.paddingLeft = '56px';
+    var sb=getSB(), tog=getTog(), ovl=getOvl(), bc=getBC();
+    if(sb)  sb.classList.add('sb-closed');
+    if(tog) tog.classList.remove('tog-open');
+    if(ovl) ovl.style.display = 'none';
+    if(bc)  bc.style.paddingLeft = '56px';
   }}
   window.closeSB = closeSB;
 
   window.toggleSB = function() {{ isOpen() ? closeSB() : openSB(); }};
 
-  // Set initial padding
-  setTimeout(function(){{
-    var bc = getBC();
+  // Set initial state once DOM is ready
+  function initSidebar() {{
+    var sb=getSB(), tog=getTog(), bc=getBC();
+    if(!sb || !tog) {{ setTimeout(initSidebar, 80); return; }}
+    // Start open
+    sb.classList.remove('sb-closed');
+    tog.classList.add('tog-open');
     if(bc) {{
       bc.style.transition = 'padding-left 0.32s cubic-bezier(0.4,0,0.2,1)';
       bc.style.paddingLeft = (SB_W+16)+'px';
     }}
-  }}, 100);
+  }}
+  setTimeout(initSidebar, 80);
 
-  // Nav page selection — change hidden selectbox in parent frame
+  // Nav page selection — trigger the hidden Streamlit selectbox
   window.choosePage = function(pageName) {{
-    var doc = window.parent.document;
-    // Find ALL select elements and look for one with our page options
     var sels = doc.querySelectorAll('select');
-    sels.forEach(function(sel) {{
-      for(var i=0;i<sel.options.length;i++) {{
-        if(sel.options[i].text.trim()===pageName) {{
-          sel.selectedIndex = i;
-          sel.dispatchEvent(new Event('change',{{bubbles:true}}));
-          // Also trigger React synthetic event
-          var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype,'value').set;
-          nativeInputValueSetter.call(sel, sel.options[i].value);
-          sel.dispatchEvent(new Event('input',{{bubbles:true}}));
-          break;
+    for(var s=0; s<sels.length; s++) {{
+      var sel = sels[s];
+      for(var i=0; i<sel.options.length; i++) {{
+        if(sel.options[i].text.trim() === pageName) {{
+          // Set value via native setter to trigger React's onChange
+          var setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set;
+          setter.call(sel, sel.options[i].value);
+          sel.dispatchEvent(new Event('change', {{bubbles:true}}));
+          sel.dispatchEvent(new Event('input',  {{bubbles:true}}));
+          return;
         }}
       }}
-    }});
+    }}
   }};
 
-  // Sign out — click the hidden Streamlit button
+  // Sign out — click the hidden __SIGNOUT__ button
   window.doSignOut = function() {{
-    var doc = window.parent.document;
     var btns = doc.querySelectorAll('button');
-    btns.forEach(function(b) {{
-      if(b.innerText && b.innerText.trim()==='__SIGNOUT__') b.click();
-    }});
+    for(var i=0; i<btns.length; i++) {{
+      if(btns[i].innerText && btns[i].innerText.trim() === '__SIGNOUT__') {{
+        btns[i].click(); return;
+      }}
+    }}
   }};
 }})();
 </script>
