@@ -465,7 +465,7 @@ if st.session_state.user is None:
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
         st.markdown("""
         <div class="login-hdr">
-            <img src="https://raw.githubusercontent.com/AnsariAffan007/pricedesk/main/logo.png"
+            <img src="https://raw.githubusercontent.com/sales369/price-fetching/main/logo.png"
                  style="width:90px;height:auto;margin:0 auto 10px;display:block;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.18));"
                  alt="PriceDesk Logo" />
             <div class="login-name">PriceDesk</div>
@@ -502,7 +502,7 @@ user_initials = username[:2].upper()
 st.markdown(f"""
 <div class="top-navbar">
   <div class="navbar-brand">
-    <img src="https://raw.githubusercontent.com/AnsariAffan007/pricedesk/main/logo.png"
+    <img src="https://raw.githubusercontent.com/sales369/price-fetching/main/logo.png"
          style="height:40px;width:auto;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(30,64,175,0.18));"
          alt="PriceDesk Logo" />
     <div>
