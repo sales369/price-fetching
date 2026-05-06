@@ -15,7 +15,7 @@ st.set_page_config(
     page_title="PriceDesk",
     page_icon="📋",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ─────────────────────────────────────────────
@@ -59,6 +59,13 @@ st.markdown("""
 #MainMenu, footer, header { visibility: hidden; }
 * { box-sizing: border-box; }
 
+/* ══ Hide sidebar & collapse toggle entirely ══ */
+section[data-testid="stSidebar"],
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapseButton"] {
+    display: none !important;
+}
+
 /* ══ App background ══ */
 .stApp {
     font-family: 'Outfit', sans-serif;
@@ -82,66 +89,152 @@ st.markdown("""
     pointer-events: none; z-index: 0;
 }
 
-/* ══ Force sidebar always open & visible ══ */
-[data-testid="stSidebar"],
-[data-testid="stSidebar"][aria-expanded="false"],
-section[data-testid="stSidebar"] {
-    display: flex !important;
-    visibility: visible !important;
-    transform: none !important;
-    width: 260px !important;
-    min-width: 260px !important;
-    max-width: 260px !important;
-    background: rgba(255,255,255,0.97) !important;
-    backdrop-filter: blur(20px) !important;
-    border-right: 1px solid rgba(203,213,225,0.65) !important;
-    box-shadow: 4px 0 32px rgba(30,64,175,0.10) !important;
-    left: 0 !important;
-    position: relative !important;
+/* ══ Top Navbar HTML strip ══ */
+.top-navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(203,213,225,0.7);
+    box-shadow: 0 2px 20px rgba(30,64,175,0.08);
+    padding: 0 24px;
+    height: 64px;
+    margin-bottom: 0;
 }
-section[data-testid="stSidebar"] > div:first-child {
-    padding: 0 0 16px 0 !important;
-    width: 260px !important;
+.navbar-brand { display:flex; align-items:center; gap:11px; }
+.navbar-logo {
+    width:36px; height:36px;
+    background: linear-gradient(135deg,#1E40AF,#0EA5E9);
+    border-radius:9px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1rem;
+    box-shadow: 0 3px 10px rgba(30,64,175,0.28);
+    flex-shrink:0;
 }
-/* Keep the open/close toggle visible so user can still close if needed */
-[data-testid="collapsedControl"],
-[data-testid="stSidebarCollapseButton"] {
-    display: flex !important;
-    visibility: visible !important;
+.navbar-title {
+    font-family:'Sora',sans-serif; font-size:1.15rem; font-weight:800;
+    background:linear-gradient(135deg,#1E40AF,#0EA5E9);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    letter-spacing:-0.02em; line-height:1.1;
+}
+.navbar-sub { font-size:0.56rem; color:#94A3B8; letter-spacing:0.09em; text-transform:uppercase; }
+.navbar-user-chip {
+    display:flex; align-items:center; gap:9px;
+    padding:5px 14px 5px 6px;
+    background:linear-gradient(135deg,#EFF6FF,#E0F2FE);
+    border:1px solid #BFDBFE; border-radius:40px;
+    margin-left:8px;
+}
+.navbar-avatar {
+    width:27px; height:27px;
+    background:linear-gradient(135deg,#1E40AF,#0EA5E9);
+    border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:0.7rem; color:#fff; font-weight:700; font-family:'Sora',sans-serif;
+}
+.navbar-uname { font-size:0.8rem; font-weight:700; color:#1E40AF; font-family:'Sora',sans-serif; }
+
+/* ══ Nav button row (the st.columns row below navbar HTML) ══ */
+.nav-row-wrap {
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(203,213,225,0.55);
+    padding: 8px 20px 8px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
-/* ══ All sidebar buttons: flat nav style ══ */
-section[data-testid="stSidebar"] .stButton button,
-section[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"],
-section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"] {
+/* ══ Nav pill buttons ══ */
+.nav-pill > div > button,
+.nav-pill-active > div > button {
+    border-radius: 8px !important;
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    padding: 0px 18px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    white-space: nowrap !important;
+    letter-spacing: 0.01em !important;
+    transition: all 0.15s ease !important;
+}
+.nav-pill > div > button {
     background: transparent !important;
     color: #475569 !important;
-    border: 1px solid transparent !important;
-    border-radius: 10px !important;
-    font-family: 'Outfit', sans-serif !important;
-    font-size: 0.88rem !important;
-    font-weight: 600 !important;
-    padding: 10px 13px !important;
-    text-align: left !important;
-    width: 100% !important;
-    min-height: 42px !important;
-    display: flex !important;
-    align-items: center !important;
+    border: 1.5px solid transparent !important;
     box-shadow: none !important;
-    transition: background 0.15s, color 0.15s !important;
-    justify-content: flex-start !important;
-    margin-bottom: 2px !important;
 }
-section[data-testid="stSidebar"] .stButton button:hover,
-section[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover,
-section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"]:hover {
+.nav-pill > div > button:hover {
     background: #EFF6FF !important;
     color: #1E40AF !important;
+    border-color: #BFDBFE !important;
     transform: none !important;
+    box-shadow: none !important;
+    opacity: 1 !important;
+}
+.nav-pill-active > div > button {
+    background: linear-gradient(135deg,#1E40AF 0%,#0EA5E9 100%) !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: 0 4px 14px rgba(30,64,175,0.32) !important;
+}
+.nav-pill-active > div > button:hover {
+    opacity: 0.9 !important;
+    transform: none !important;
+    box-shadow: 0 4px 14px rgba(30,64,175,0.32) !important;
+}
+
+/* ══ Sign out pill ══ */
+.signout-pill > div > button {
+    background: transparent !important;
+    color: #DC2626 !important;
+    border: 1.5px solid #FECACA !important;
+    border-radius: 8px !important;
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 0.83rem !important;
+    font-weight: 600 !important;
+    padding: 0px 14px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    box-shadow: none !important;
+    white-space: nowrap !important;
+}
+.signout-pill > div > button:hover {
+    background: #FEF2F2 !important;
+    border-color: #F87171 !important;
+    color: #DC2626 !important;
+    transform: none !important;
+    box-shadow: none !important;
     opacity: 1 !important;
 }
 
-/* ══ Main area buttons ══ */
+/* ══ Refresh pill ══ */
+.refresh-pill > div > button {
+    background: transparent !important;
+    color: #475569 !important;
+    border: 1.5px solid #E2E8F0 !important;
+    border-radius: 8px !important;
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 0.83rem !important;
+    font-weight: 600 !important;
+    padding: 0px 12px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    box-shadow: none !important;
+}
+.refresh-pill > div > button:hover {
+    background: #EFF6FF !important;
+    color: #1E40AF !important;
+    border-color: #BFDBFE !important;
+    transform: none !important;
+    box-shadow: none !important;
+    opacity: 1 !important;
+}
+
+/* ══ Main area action buttons ══ */
 .block-container .stButton > button {
     background: linear-gradient(135deg,#1E40AF,#0EA5E9) !important;
     color: #fff !important;
@@ -167,12 +260,12 @@ section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"]:hover {
 
 /* ══ Main content ══ */
 .block-container {
-    padding: 1.5rem 2rem 3rem !important;
+    padding: 0 2rem 3rem !important;
     max-width: 100% !important;
     position: relative; z-index: 1;
 }
 
-/* ══ Cards ══ */
+/* ══ Metric cards ══ */
 .metric-row { display:flex; gap:12px; margin-bottom:1.4rem; flex-wrap:wrap; }
 .metric-card {
     background: var(--card); backdrop-filter: blur(16px);
@@ -192,6 +285,7 @@ section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"]:hover {
 .metric-card .mc-value { font-size:1.6rem; font-weight:800; font-family:'Sora',sans-serif; line-height:1; background:linear-gradient(135deg,#1E40AF,#0EA5E9); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 .metric-card .mc-sub   { font-size:.69rem; color:var(--muted-lt); margin-top:5px; }
 
+/* ══ Section cards ══ */
 .section-card {
     background: var(--card); backdrop-filter: blur(16px);
     border: 1px solid rgba(255,255,255,0.9); border-radius: 16px;
@@ -203,6 +297,8 @@ section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"]:hover {
     color:var(--muted); margin-bottom:14px; padding-bottom:10px;
     border-bottom:1px solid var(--border-lt);
 }
+
+/* ══ Page header ══ */
 .page-header {
     display:flex; align-items:center; gap:14px;
     margin-bottom:1.6rem; padding-bottom:1rem;
@@ -217,6 +313,7 @@ section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"]:hover {
 .ph-title { font-size:1.4rem!important; margin:0!important; font-family:'Sora',sans-serif!important; font-weight:700!important; }
 .ph-sub   { margin:0; color:var(--muted); font-size:0.77rem; margin-top:3px; }
 
+/* ══ Inputs ══ */
 .stTextInput>div>div>input,
 .stNumberInput>div>div>input,
 .stSelectbox>div>div {
@@ -236,13 +333,14 @@ section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"]:hover {
     border-radius:12px; overflow:hidden; border:1px solid var(--border-lt)!important;
 }
 
+/* ══ Badges ══ */
 .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:.68rem; font-weight:700; letter-spacing:.05em; margin:2px; }
 .badge-blue  { background:#EFF6FF; color:#1E40AF; border:1px solid #BFDBFE; }
 .badge-green { background:#ECFDF5; color:#059669; border:1px solid #A7F3D0; }
 .badge-red   { background:#FEF2F2; color:#DC2626; border:1px solid #FECACA; }
 .part-col-label { font-size:.65rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding-left:2px; }
 
-/* Login */
+/* ══ Login ══ */
 .login-card { background:rgba(255,255,255,0.9); backdrop-filter:blur(24px); border:1px solid rgba(255,255,255,0.95); border-radius:22px; padding:0 0 34px; box-shadow:0 24px 64px rgba(30,64,175,0.14); max-width:420px; width:100%; overflow:hidden; }
 .login-hdr  { background:linear-gradient(135deg,#1E40AF,#0EA5E9 60%,#6366F1); padding:34px 40px 30px; text-align:center; position:relative; }
 .login-hdr::after { content:''; position:absolute; bottom:-1px; left:0; right:0; height:20px; background:rgba(255,255,255,0.9); border-radius:20px 20px 0 0; }
@@ -306,22 +404,6 @@ def init_schema():
 
 init_schema()
 
-# ── Force sidebar open on every load ──
-st.markdown("""
-<script>
-(function() {
-    function openSidebar() {
-        var btn = window.parent.document.querySelector('[data-testid="collapsedControl"]');
-        if (btn) {
-            var expanded = window.parent.document.querySelector('[data-testid="stSidebar"][aria-expanded="true"]');
-            if (!expanded) { btn.click(); }
-        }
-    }
-    setTimeout(openSidebar, 300);
-})();
-</script>
-""", unsafe_allow_html=True)
-
 
 # ─────────────────────────────────────────────
 #  HELPERS
@@ -371,7 +453,7 @@ def check_login(u, p):
 
 
 # ─────────────────────────────────────────────
-#  LOGIN
+#  LOGIN PAGE
 # ─────────────────────────────────────────────
 if st.session_state.user is None:
     _, mid, _ = st.columns([1,1.1,1])
@@ -401,104 +483,64 @@ if st.session_state.user is None:
 
 
 # ─────────────────────────────────────────────
-#  SIDEBAR  — native st.sidebar (fully reliable, no JS)
+#  TOP NAVBAR
 # ─────────────────────────────────────────────
-username = st.session_state.user["username"]
-is_admin = (username == "admin")
-cur_page = st.session_state.page
+username  = st.session_state.user["username"]
+is_admin  = (username == "admin")
+cur_page  = st.session_state.page
 nav_pages = ["Price Lookup","Saved Quotations"] + (["Data Upload","Access Control"] if is_admin else [])
 nav_icons = {"Price Lookup":"📊","Saved Quotations":"📁","Data Upload":"📤","Access Control":"🔐"}
+user_initials = username[:2].upper()
 
-with st.sidebar:
-    # ── Logo ──
-    st.markdown(f"""
-    <div style="padding:22px 18px 14px; border-bottom:1px solid #E2E8F0; margin-bottom:4px;">
-      <div style="font-family:'Sora',sans-serif; font-size:1.28rem; font-weight:800;
-                  background:linear-gradient(135deg,#1E40AF,#0EA5E9);
-                  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-                  background-clip:text; letter-spacing:-.02em;">📋 PriceDesk</div>
-      <div style="font-size:0.6rem; color:#94A3B8; letter-spacing:.09em;
-                  text-transform:uppercase; margin-top:2px;">Parts Pricing Platform</div>
+# ── Static brand bar (HTML only — no interactivity needed here) ──
+st.markdown(f"""
+<div class="top-navbar">
+  <div class="navbar-brand">
+    <div class="navbar-logo">📋</div>
+    <div>
+      <div class="navbar-title">PriceDesk</div>
+      <div class="navbar-sub">Parts Pricing Platform</div>
     </div>
-    <div style="margin:12px 12px 10px; background:linear-gradient(135deg,#EFF6FF,#E0F2FE);
-                border-radius:10px; padding:10px 13px; border:1px solid #BFDBFE;">
-      <div style="font-size:0.58rem; font-weight:700; letter-spacing:.09em;
-                  text-transform:uppercase; color:#475569; margin-bottom:2px;">Logged in as</div>
-      <div style="font-size:0.88rem; font-weight:700; color:#1E40AF;
-                  font-family:'Sora',sans-serif;">{username}</div>
-    </div>
-    """, unsafe_allow_html=True)
+  </div>
+  <div class="navbar-user-chip">
+    <div class="navbar-avatar">{user_initials}</div>
+    <div class="navbar-uname">{username}</div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
-    # ── Nav radio (reliable across all Streamlit versions) ──
-    st.markdown("""
-    <style>
-    /* Hide the radio group label */
-    section[data-testid="stSidebar"] [data-testid="stRadio"] > label:first-child {
-        display: none !important;
-    }
-    /* Each radio option */
-    section[data-testid="stSidebar"] [data-testid="stRadio"] label {
-        background: transparent !important;
-        border: 1px solid transparent !important;
-        border-radius: 10px !important;
-        padding: 9px 13px !important;
-        font-family: 'Outfit', sans-serif !important;
-        font-size: 0.88rem !important;
-        font-weight: 600 !important;
-        color: #475569 !important;
-        cursor: pointer !important;
-        transition: background 0.15s, color 0.15s !important;
-        width: 100% !important;
-    }
-    section[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
-        background: #EFF6FF !important;
-        color: #1E40AF !important;
-    }
-    /* Hide the radio circle dot */
-    section[data-testid="stSidebar"] [data-testid="stRadio"] input[type="radio"],
-    section[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdownContainer"] {
-        display: none !important;
-    }
-    /* Sign out button */
-    section[data-testid="stSidebar"] .stButton button {
-        background: #FEF2F2 !important;
-        color: #DC2626 !important;
-        border: 1px solid #FECACA !important;
-        font-weight: 700 !important;
-        border-radius: 10px !important;
-        width: 100% !important;
-        font-family: 'Outfit', sans-serif !important;
-        font-size: 0.88rem !important;
-        min-height: 42px !important;
-    }
-    section[data-testid="stSidebar"] .stButton button:hover {
-        background: #FEE2E2 !important;
-        color: #DC2626 !important;
-        transform: none !important;
-        opacity: 1 !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# ── Interactive nav buttons row ──
+# Build columns: [nav buttons...] [spacer] [refresh] [signout]
+n_nav = len(nav_pages)
+# each nav pill ~150px, refresh ~52px, signout ~110px, rest is spacer
+col_widths = [1.5] * n_nav + [4, 0.6, 1.1]
+cols = st.columns(col_widths)
 
-    nav_labels = [f"{nav_icons[p]}  {p}" for p in nav_pages]
-    cur_label   = f"{nav_icons[cur_page]}  {cur_page}"
-    selected = st.radio("Navigation", nav_labels,
-                        index=nav_labels.index(cur_label),
-                        key="nav_radio")
-    # Sync session state when user picks a different page
-    selected_page = selected.split("  ", 1)[1] if "  " in selected else selected.lstrip("📊📁📤🔐 ")
-    if selected_page != st.session_state.page:
-        st.session_state.page = selected_page
+for i, p in enumerate(nav_pages):
+    css_cls = "nav-pill-active" if p == cur_page else "nav-pill"
+    with cols[i]:
+        st.markdown(f'<div class="{css_cls}">', unsafe_allow_html=True)
+        if st.button(f"{nav_icons[p]}  {p}", key=f"nav_{p}", use_container_width=True):
+            st.session_state.page = p
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# spacer col does nothing
+with cols[n_nav + 1]:
+    st.markdown('<div class="refresh-pill">', unsafe_allow_html=True)
+    if st.button("🔄", key="refresh_btn", help="Refresh brands"):
+        fetch_brands.clear()
         st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── Spacer + divider ──
-    st.markdown("""
-    <div style="height:1px; background:#E2E8F0; margin:16px 0 10px;"></div>
-    """, unsafe_allow_html=True)
-
-    if st.button("⏏  Sign Out", key="signout_btn", use_container_width=True):
+with cols[n_nav + 2]:
+    st.markdown('<div class="signout-pill">', unsafe_allow_html=True)
+    if st.button("⏏ Sign Out", key="signout_btn", use_container_width=True):
         st.session_state.clear()
         st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 
 page = st.session_state.page
 
@@ -684,14 +726,14 @@ elif page == "Saved Quotations":
             if sel_mask.any():
                 ids_to_del=list(final_df.loc[sel_mask[sel_mask].index,"_offer_id"].unique())
                 if ids_to_del:
-                    conn=get_conn(); cur2=conn.cursor()
+                    conn2=get_conn(); cur2=conn2.cursor()
                     try:
                         cur2.execute("DELETE FROM saved_offers WHERE id=ANY(%s)",(ids_to_del,))
-                        conn.commit(); st.success(f"Deleted {len(ids_to_del)} quotation(s).")
+                        conn2.commit(); st.success(f"Deleted {len(ids_to_del)} quotation(s).")
                     except Exception as e:
-                        conn.rollback(); st.error(f"Delete failed: {e}")
+                        conn2.rollback(); st.error(f"Delete failed: {e}")
                     finally:
-                        release(conn)
+                        release(conn2)
                     st.rerun()
             else:
                 st.warning("Select at least one row to delete.")
