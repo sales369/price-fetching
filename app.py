@@ -82,28 +82,32 @@ st.markdown("""
     pointer-events: none; z-index: 0;
 }
 
-/* ══ Native sidebar styling ══ */
+/* ══ Force sidebar always open & visible ══ */
+[data-testid="stSidebar"],
+[data-testid="stSidebar"][aria-expanded="false"],
 section[data-testid="stSidebar"] {
+    display: flex !important;
+    visibility: visible !important;
+    transform: none !important;
+    width: 260px !important;
+    min-width: 260px !important;
+    max-width: 260px !important;
     background: rgba(255,255,255,0.97) !important;
     backdrop-filter: blur(20px) !important;
     border-right: 1px solid rgba(203,213,225,0.65) !important;
     box-shadow: 4px 0 32px rgba(30,64,175,0.10) !important;
-    min-width: 260px !important;
-    max-width: 260px !important;
+    left: 0 !important;
+    position: relative !important;
 }
 section[data-testid="stSidebar"] > div:first-child {
     padding: 0 0 16px 0 !important;
+    width: 260px !important;
 }
-
-/* ══ Hide collapse button — sidebar is always visible ══ */
+/* Keep the open/close toggle visible so user can still close if needed */
 [data-testid="collapsedControl"],
-button[data-testid="collapsedControl"],
-[data-testid="stSidebarCollapseButton"],
-button[aria-label="Close sidebar"],
-button[aria-label="Collapse sidebar"] {
-    display: none !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
+[data-testid="stSidebarCollapseButton"] {
+    display: flex !important;
+    visibility: visible !important;
 }
 
 /* ══ All sidebar buttons: flat nav style ══ */
@@ -301,6 +305,22 @@ def init_schema():
         release(c)
 
 init_schema()
+
+# ── Force sidebar open on every load ──
+st.markdown("""
+<script>
+(function() {
+    function openSidebar() {
+        var btn = window.parent.document.querySelector('[data-testid="collapsedControl"]');
+        if (btn) {
+            var expanded = window.parent.document.querySelector('[data-testid="stSidebar"][aria-expanded="true"]');
+            if (!expanded) { btn.click(); }
+        }
+    }
+    setTimeout(openSidebar, 300);
+})();
+</script>
+""", unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────
