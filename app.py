@@ -107,7 +107,9 @@ button[aria-label="Collapse sidebar"] {
 }
 
 /* ══ All sidebar buttons: flat nav style ══ */
-section[data-testid="stSidebar"] .stButton > button {
+section[data-testid="stSidebar"] .stButton button,
+section[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"],
+section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"] {
     background: transparent !important;
     color: #475569 !important;
     border: 1px solid transparent !important;
@@ -118,12 +120,17 @@ section[data-testid="stSidebar"] .stButton > button {
     padding: 10px 13px !important;
     text-align: left !important;
     width: 100% !important;
+    min-height: 42px !important;
+    display: flex !important;
+    align-items: center !important;
     box-shadow: none !important;
     transition: background 0.15s, color 0.15s !important;
     justify-content: flex-start !important;
     margin-bottom: 2px !important;
 }
-section[data-testid="stSidebar"] .stButton > button:hover {
+section[data-testid="stSidebar"] .stButton button:hover,
+section[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover,
+section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"]:hover {
     background: #EFF6FF !important;
     color: #1E40AF !important;
     transform: none !important;
@@ -430,13 +437,15 @@ with st.sidebar:
     st.markdown("""
     <style>
     /* Target the very last stButton inside sidebar for sign-out red styling */
-    section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div:last-child .stButton > button {
+    section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div:last-child .stButton button,
+    section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div:last-child [data-testid="stBaseButton-secondary"] {
         background: #FEF2F2 !important;
         color: #DC2626 !important;
         border: 1px solid #FECACA !important;
         font-weight: 700 !important;
     }
-    section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div:last-child .stButton > button:hover {
+    section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div:last-child .stButton button:hover,
+    section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div:last-child [data-testid="stBaseButton-secondary"]:hover {
         background: #FEE2E2 !important;
         color: #DC2626 !important;
     }
