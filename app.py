@@ -383,6 +383,8 @@ def init_schema():
                 id SERIAL PRIMARY KEY, part_no TEXT, brand TEXT, price NUMERIC, supplier TEXT
             );
             ALTER TABLE parts_table ADD COLUMN IF NOT EXISTS supplier TEXT;
+            ALTER TABLE parts_table ADD COLUMN IF NOT EXISTS currency TEXT;
+            ALTER TABLE parts_table ADD COLUMN IF NOT EXISTS delivery_time TEXT;
             DO $$
             BEGIN
               IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='unique_part_supplier') THEN
@@ -427,18 +429,20 @@ def lookup_prices(items):
             part=r["part_no"].strip(); brand=r["brand"].strip(); qty=max(int(r.get("qty") or 1),1)
             if not part or not brand: continue
             cur.execute("""
-                SELECT supplier,price FROM parts_table
+                SELECT supplier,price,currency,delivery_time FROM parts_table
                 WHERE TRIM(LOWER(part_no))=TRIM(LOWER(%s)) AND TRIM(LOWER(brand))=TRIM(LOWER(%s))
                 ORDER BY price ASC
             """, (part,brand))
             rows=cur.fetchall()
             if rows:
-                for supplier,price in rows:
+                for supplier,price,currency,delivery_time in rows:
                     results.append({"Brand":brand,"Part No":part,"Supplier":supplier,
-                                    "Qty":qty,"Unit Price (JPY)":float(price),"Amount (JPY)":qty*float(price)})
+                                    "Currency":currency or "","Delivery Time":delivery_time or "",
+                                    "Qty":qty,"Unit Price":float(price),"Amount":qty*float(price)})
             else:
                 results.append({"Brand":brand,"Part No":part,"Supplier":"Not Found",
-                                "Qty":qty,"Unit Price (JPY)":0.0,"Amount (JPY)":0.0})
+                                "Currency":"","Delivery Time":"",
+                                "Qty":qty,"Unit Price":0.0,"Amount":0.0})
     finally:
         release(c)
     return results
@@ -461,7 +465,9 @@ if st.session_state.user is None:
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
         st.markdown("""
         <div class="login-hdr">
-            <div class="login-ico">📋</div>
+            <img src="https://raw.githubusercontent.com/AnsariAffan007/pricedesk/main/logo.png"
+                 style="width:90px;height:auto;margin:0 auto 10px;display:block;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.18));"
+                 alt="PriceDesk Logo" />
             <div class="login-name">PriceDesk</div>
             <div class="login-tag">PARTS PRICING PLATFORM</div>
         </div>
@@ -496,7 +502,9 @@ user_initials = username[:2].upper()
 st.markdown(f"""
 <div class="top-navbar">
   <div class="navbar-brand">
-    <div class="navbar-logo">📋</div>
+    <img src="https://raw.githubusercontent.com/AnsariAffan007/pricedesk/main/logo.png"
+         style="height:40px;width:auto;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(30,64,175,0.18));"
+         alt="PriceDesk Logo" />
     <div>
       <div class="navbar-title">PriceDesk</div>
       <div class="navbar-sub">Parts Pricing Platform</div>
@@ -614,13 +622,13 @@ if page == "Price Lookup":
     if not df.empty:
         found=df[df["Supplier"]!="Not Found"]
         n_parts=int(df["Part No"].nunique()); n_suppliers=int(found["Supplier"].nunique()) if not found.empty else 0
-        best_price=float(found["Unit Price (JPY)"].min()) if not found.empty else 0.0; n_records=int(len(found))
+        best_price=float(found["Unit Price"].min()) if not found.empty else 0.0; n_records=int(len(found))
 
         st.markdown(f"""
         <div class="metric-row">
           <div class="metric-card"><div class="mc-label">Parts Searched</div><div class="mc-value">{n_parts}</div><div class="mc-sub">unique part numbers</div></div>
           <div class="metric-card"><div class="mc-label">Suppliers Found</div><div class="mc-value">{n_suppliers}</div><div class="mc-sub">across all parts</div></div>
-          <div class="metric-card"><div class="mc-label">Best Unit Price</div><div class="mc-value">¥{best_price:,.0f}</div><div class="mc-sub">lowest unit price</div></div>
+          <div class="metric-card"><div class="mc-label">Best Unit Price</div><div class="mc-value">{best_price:,.0f}</div><div class="mc-sub">lowest unit price</div></div>
           <div class="metric-card"><div class="mc-label">Price Records</div><div class="mc-value">{n_records}</div><div class="mc-sub">supplier rows returned</div></div>
         </div>""", unsafe_allow_html=True)
 
@@ -630,13 +638,13 @@ if page == "Price Lookup":
         def highlight_rows(row):
             if row["Supplier"]=="Not Found": return ["background-color:#FEF2F2;color:#991B1B"]*len(row)
             mask=(df["Part No"]==row["Part No"])&(df["Brand"]==row["Brand"])
-            valid=df.loc[mask&(df["Supplier"]!="Not Found"),"Unit Price (JPY)"]
-            if not valid.empty and row["Unit Price (JPY)"]==valid.min():
+            valid=df.loc[mask&(df["Supplier"]!="Not Found"),"Unit Price"]
+            if not valid.empty and row["Unit Price"]==valid.min():
                 return ["background-color:#F0FDF4;color:#065F46;font-weight:600"]*len(row)
             return [""]*len(row)
 
         styled=(df.style.apply(highlight_rows,axis=1)
-                  .format({"Unit Price (JPY)":"¥{:,.0f}","Amount (JPY)":"¥{:,.0f}"}))
+                  .format({"Unit Price":"{:,.0f}","Amount":"{:,.0f}"}))
         st.dataframe(styled, use_container_width=True, hide_index=True, height=360)
         st.markdown("""
         <div style="display:flex;gap:16px;margin-top:10px;font-size:.74rem;color:#64748B;">
@@ -758,8 +766,10 @@ elif page == "Data Upload":
       <span class="badge badge-blue">Part Number</span>
       <span class="badge badge-blue">JPY Price</span>
       <span class="badge badge-blue">Supplier</span>
+      <span class="badge badge-blue">Currency</span>
+      <span class="badge badge-blue">Delivery Time</span>
       <div style="font-size:.79rem;color:#64748B;margin-top:12px;line-height:1.7;">
-        Column names are <strong>case-insensitive</strong>. Same part uploaded again will <strong>update</strong> price — no duplicates.
+        Column names are <strong>case-insensitive</strong>. Same part uploaded again will <strong>update</strong> price — no duplicates. Currency and Delivery Time are optional.
       </div>
     </div>""", unsafe_allow_html=True)
 
@@ -768,7 +778,8 @@ elif page == "Data Upload":
         df_raw=pd.read_excel(file,dtype=str)
         col_map={clean_col(c):c for c in df_raw.columns}
         ALIASES={"brand":["make","brand","manufacturer"],"part_no":["partnumber","partno","part","partnum","partnumbers"],
-                 "price":["jpyprice","price","unitprice","jpy","jprice"],"supplier":["supplier","vendor","source"]}
+                 "price":["jpyprice","price","unitprice","jpy","jprice","unitrate"],"supplier":["supplier","vendor","source"],
+                 "currency":["currency","cur","ccy"],"delivery_time":["deliverytime","delivery","leadtime","deliverydays"]}
         rename={}
         for target,aliases in ALIASES.items():
             for alias in aliases:
@@ -779,23 +790,27 @@ elif page == "Data Upload":
             st.error(f"Could not map: **{missing}**  Detected: `{list(df_raw.columns)}`"); st.stop()
         for col in ["brand","part_no","supplier"]:
             df_raw[col]=df_raw[col].astype(str).str.replace(r'[\n"\r]','',regex=True).str.strip()
+        for col in ["currency","delivery_time"]:
+            if col not in df_raw.columns: df_raw[col]=""
+            else: df_raw[col]=df_raw[col].astype(str).str.replace(r'[\n"\r]','',regex=True).str.strip()
         df_raw["price"]=pd.to_numeric(df_raw["price"],errors="coerce").fillna(0)
         df_raw=df_raw[(df_raw["part_no"]!="")&(df_raw["brand"]!="")&(df_raw["supplier"]!="")
                       &(df_raw["part_no"]!="nan")&(df_raw["brand"]!="nan")]
 
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown(f'<div class="section-label">Preview — {len(df_raw):,} valid rows</div>', unsafe_allow_html=True)
-        st.dataframe(df_raw[["brand","part_no","price","supplier"]].head(30),
+        preview_cols=[c for c in ["brand","part_no","price","currency","delivery_time","supplier"] if c in df_raw.columns]
+        st.dataframe(df_raw[preview_cols].head(30),
                      use_container_width=True, hide_index=True, height=280)
         st.markdown('</div>', unsafe_allow_html=True)
 
         if st.button(f"⬆ Upload {len(df_raw):,} Rows to Database"):
-            values=list(df_raw[["part_no","brand","price","supplier"]].itertuples(index=False,name=None))
+            values=list(df_raw[["part_no","brand","price","supplier","currency","delivery_time"]].itertuples(index=False,name=None))
             c=get_conn(); cur=c.cursor()
             try:
                 execute_values(cur,"""
-                    INSERT INTO parts_table(part_no,brand,price,supplier) VALUES %s
-                    ON CONFLICT(part_no,brand,supplier) DO UPDATE SET price=EXCLUDED.price
+                    INSERT INTO parts_table(part_no,brand,price,supplier,currency,delivery_time) VALUES %s
+                    ON CONFLICT(part_no,brand,supplier) DO UPDATE SET price=EXCLUDED.price,currency=EXCLUDED.currency,delivery_time=EXCLUDED.delivery_time
                 """,values,page_size=500)
                 c.commit(); fetch_brands.clear(); st.success(f"Uploaded {len(values):,} rows.")
             except Exception as e:
