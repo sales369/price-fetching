@@ -409,48 +409,73 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Nav items ──
-    for p in nav_pages:
-        icon = nav_icons[p]
-        is_active = (p == cur_page)
-        # Active page gets highlighted background via inline style trick
-        if is_active:
-            st.markdown(f"""
-            <div style="background:linear-gradient(135deg,#EFF6FF,#DBEAFE);
-                        color:#1E40AF; border:1px solid #BFDBFE; border-radius:10px;
-                        padding:10px 13px; font-size:0.88rem; font-weight:700;
-                        font-family:'Outfit',sans-serif; margin-bottom:2px;
-                        display:flex; align-items:center; gap:8px; cursor:default;">
-              {icon}&nbsp; {p}
-            </div>""", unsafe_allow_html=True)
-        else:
-            if st.button(f"{icon}  {p}", key=f"nav_{p}", use_container_width=True):
-                st.session_state.page = p
-                st.rerun()
+    # ── Nav radio (reliable across all Streamlit versions) ──
+    st.markdown("""
+    <style>
+    /* Hide the radio group label */
+    section[data-testid="stSidebar"] [data-testid="stRadio"] > label:first-child {
+        display: none !important;
+    }
+    /* Each radio option */
+    section[data-testid="stSidebar"] [data-testid="stRadio"] label {
+        background: transparent !important;
+        border: 1px solid transparent !important;
+        border-radius: 10px !important;
+        padding: 9px 13px !important;
+        font-family: 'Outfit', sans-serif !important;
+        font-size: 0.88rem !important;
+        font-weight: 600 !important;
+        color: #475569 !important;
+        cursor: pointer !important;
+        transition: background 0.15s, color 0.15s !important;
+        width: 100% !important;
+    }
+    section[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
+        background: #EFF6FF !important;
+        color: #1E40AF !important;
+    }
+    /* Hide the radio circle dot */
+    section[data-testid="stSidebar"] [data-testid="stRadio"] input[type="radio"],
+    section[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdownContainer"] {
+        display: none !important;
+    }
+    /* Sign out button */
+    section[data-testid="stSidebar"] .stButton button {
+        background: #FEF2F2 !important;
+        color: #DC2626 !important;
+        border: 1px solid #FECACA !important;
+        font-weight: 700 !important;
+        border-radius: 10px !important;
+        width: 100% !important;
+        font-family: 'Outfit', sans-serif !important;
+        font-size: 0.88rem !important;
+        min-height: 42px !important;
+    }
+    section[data-testid="stSidebar"] .stButton button:hover {
+        background: #FEE2E2 !important;
+        color: #DC2626 !important;
+        transform: none !important;
+        opacity: 1 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    nav_labels = [f"{nav_icons[p]}  {p}" for p in nav_pages]
+    cur_label   = f"{nav_icons[cur_page]}  {cur_page}"
+    selected = st.radio("Navigation", nav_labels,
+                        index=nav_labels.index(cur_label),
+                        key="nav_radio")
+    # Sync session state when user picks a different page
+    selected_page = selected.split("  ", 1)[1] if "  " in selected else selected.lstrip("📊📁📤🔐 ")
+    if selected_page != st.session_state.page:
+        st.session_state.page = selected_page
+        st.rerun()
 
     # ── Spacer + divider ──
     st.markdown("""
     <div style="height:1px; background:#E2E8F0; margin:16px 0 10px;"></div>
     """, unsafe_allow_html=True)
 
-    # ── Sign out — red styled ──
-    st.markdown("""
-    <style>
-    /* Target the very last stButton inside sidebar for sign-out red styling */
-    section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div:last-child .stButton button,
-    section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div:last-child [data-testid="stBaseButton-secondary"] {
-        background: #FEF2F2 !important;
-        color: #DC2626 !important;
-        border: 1px solid #FECACA !important;
-        font-weight: 700 !important;
-    }
-    section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div:last-child .stButton button:hover,
-    section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div:last-child [data-testid="stBaseButton-secondary"]:hover {
-        background: #FEE2E2 !important;
-        color: #DC2626 !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
     if st.button("⏏  Sign Out", key="signout_btn", use_container_width=True):
         st.session_state.clear()
         st.rerun()
