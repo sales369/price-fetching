@@ -351,24 +351,101 @@ label, .stTextInput label, .stSelectbox label,
 .part-col-label { font-size:.65rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#64748B; padding-left:2px; }
 
 /* ═══ LOGIN CARD ═══ */
+.login-wrap {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 20px;
+}
 .login-card {
-    background: rgba(255,255,255,0.96);
-    backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px);
-    border:1px solid rgba(255,255,255,1); border-radius:22px;
-    padding:0 0 34px; box-shadow:0 24px 64px rgba(30,64,175,0.16);
-    max-width:420px; width:100%; overflow:hidden;
+    background: rgba(255,255,255,0.97);
+    backdrop-filter:blur(32px); -webkit-backdrop-filter:blur(32px);
+    border:1px solid rgba(255,255,255,1); border-radius:24px;
+    padding:0; box-shadow:0 24px 80px rgba(30,64,175,0.18), 0 0 0 1px rgba(255,255,255,0.8);
+    max-width:400px; width:100%; overflow:hidden;
 }
 .login-hdr {
-    background:linear-gradient(135deg,#1E40AF,#0EA5E9 60%,#6366F1);
-    padding:34px 40px 30px; text-align:center; position:relative;
+    background:linear-gradient(145deg,#1a3a8f 0%,#1E40AF 40%,#0EA5E9 100%);
+    padding:40px 36px 36px; text-align:center; position:relative; overflow:hidden;
 }
-.login-hdr::after { content:''; position:absolute; bottom:-1px; left:0; right:0; height:20px; background:rgba(255,255,255,0.96); border-radius:20px 20px 0 0; }
-.login-ico  { width:60px; height:60px; background:rgba(255,255,255,0.22); border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:1.7rem; margin:0 auto 12px; border:2px solid rgba(255,255,255,0.4); }
-.login-name { font-family:'Sora',sans-serif; font-size:1.7rem; font-weight:800; color:#fff; margin-bottom:4px; }
-.login-tag  { color:rgba(255,255,255,0.80); font-size:.76rem; letter-spacing:0.08em; }
-.login-body { padding:26px 34px 0; }
-.login-hi   { font-family:'Sora',sans-serif; font-size:1rem; font-weight:700; color:#0F172A; margin-bottom:3px; }
-.login-sub  { color:#64748B; font-size:.77rem; margin-bottom:20px; }
+.login-hdr::before {
+    content:''; position:absolute; top:-60px; right:-60px;
+    width:200px; height:200px; border-radius:50%;
+    background:rgba(255,255,255,0.07);
+}
+.login-hdr::after {
+    content:''; position:absolute; bottom:-50px; left:-40px;
+    width:160px; height:160px; border-radius:50%;
+    background:rgba(255,255,255,0.05);
+}
+.login-logo-wrap {
+    width:72px; height:72px; margin:0 auto 16px;
+    background:rgba(255,255,255,0.15);
+    border:1px solid rgba(255,255,255,0.30);
+    border-radius:20px; display:flex; align-items:center; justify-content:center;
+    position:relative; z-index:1;
+    box-shadow:0 8px 24px rgba(0,0,0,0.15);
+}
+.login-name {
+    font-family:'Sora',sans-serif; font-size:1.9rem; font-weight:800;
+    color:#fff; margin-bottom:5px; position:relative; z-index:1;
+    letter-spacing:-0.02em;
+}
+.login-tag  {
+    color:rgba(255,255,255,0.70); font-size:.68rem;
+    letter-spacing:0.14em; text-transform:uppercase;
+    position:relative; z-index:1;
+}
+.login-body {
+    padding:32px 32px 32px;
+    background: #fff;
+}
+.login-hi   {
+    font-family:'Sora',sans-serif; font-size:1.15rem; font-weight:700;
+    color:#0F172A; margin-bottom:4px;
+}
+.login-sub  { color:#94A3B8; font-size:.78rem; margin-bottom:24px; }
+.login-field-label {
+    font-size:0.75rem; font-weight:700; color:#374151;
+    letter-spacing:0.05em; text-transform:uppercase; margin-bottom:6px; display:block;
+}
+/* Style inputs inside the login card specifically */
+.login-body .stTextInput > div > div > input {
+    border-radius: 10px !important;
+    border: 1.5px solid #E5E7EB !important;
+    background: #F9FAFB !important;
+    color: #111827 !important;
+    font-size: 0.9rem !important;
+    padding: 10px 14px !important;
+    height: 46px !important;
+    transition: border-color 0.15s !important;
+}
+.login-body .stTextInput > div > div > input:focus {
+    border-color: #1E40AF !important;
+    background: #fff !important;
+    box-shadow: 0 0 0 3px rgba(30,64,175,0.10) !important;
+}
+.login-body .stTextInput label {
+    font-size: 0.75rem !important; font-weight: 700 !important;
+    color: #374151 !important; letter-spacing: 0.05em !important;
+    text-transform: uppercase !important; margin-bottom: 4px !important;
+}
+.login-body .stButton > button {
+    background: linear-gradient(135deg,#1E40AF,#0EA5E9) !important;
+    color: #fff !important; border: none !important;
+    border-radius: 12px !important; height: 48px !important;
+    font-size: 0.95rem !important; font-weight: 700 !important;
+    letter-spacing: 0.02em !important;
+    box-shadow: 0 6px 20px rgba(30,64,175,0.35) !important;
+    transition: all 0.2s !important;
+}
+.login-body .stButton > button:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 8px 28px rgba(30,64,175,0.45) !important;
+    opacity: 1 !important;
+}
+.login-divider {
+    height:1px; background:linear-gradient(90deg,transparent,#E5E7EB,transparent);
+    margin: 0 0 20px 0;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -522,31 +599,34 @@ def check_login(u, p):
 #  LOGIN PAGE
 # ─────────────────────────────────────────────
 if st.session_state.user is None:
-    _, mid, _ = st.columns([1,1.1,1])
+    _, mid, _ = st.columns([1, 1.1, 1])
     with mid:
-        st.markdown('<div class="login-card">', unsafe_allow_html=True)
         st.markdown("""
-        <div class="login-hdr">
-            <img src="https://raw.githubusercontent.com/sales369/price-fetching/main/logo.png"
-                 style="width:90px;height:auto;margin:0 auto 10px;display:block;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.18));"
-                 alt="PriceDesk Logo" />
+        <div class="login-card">
+          <div class="login-hdr">
+            <div class="login-logo-wrap">
+              <img src="https://raw.githubusercontent.com/sales369/price-fetching/main/logo.png"
+                   style="width:52px;height:auto;object-fit:contain;"
+                   alt="PriceDesk Logo" />
+            </div>
             <div class="login-name">PriceDesk</div>
-            <div class="login-tag">PARTS PRICING PLATFORM</div>
-        </div>
-        <div style="height:16px;"></div>""", unsafe_allow_html=True)
-        st.markdown('<div class="login-body">', unsafe_allow_html=True)
-        st.markdown('<div class="login-hi">Welcome back</div>', unsafe_allow_html=True)
-        st.markdown('<div class="login-sub">Sign in to continue to your workspace</div>', unsafe_allow_html=True)
-        u_in = st.text_input("Username", placeholder="Enter your username", key="li_u")
-        p_in = st.text_input("Password", type="password", placeholder="Enter your password", key="li_p")
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-        if st.button("Sign In →", use_container_width=True):
+            <div class="login-tag">Parts Pricing Platform</div>
+          </div>
+          <div class="login-body">
+            <div class="login-hi">Welcome back 👋</div>
+            <div class="login-sub">Sign in to continue to your workspace</div>
+            <div class="login-divider"></div>
+        """, unsafe_allow_html=True)
+        u_in = st.text_input("USERNAME", placeholder="Enter your username", key="li_u")
+        p_in = st.text_input("PASSWORD", type="password", placeholder="Enter your password", key="li_p")
+        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+        if st.button("Sign In  →", use_container_width=True):
             if check_login(u_in, p_in):
                 st.session_state.user = {"username": u_in}
                 st.rerun()
             else:
                 st.error("Invalid username or password.")
-        st.markdown('</div></div>', unsafe_allow_html=True)
+        st.markdown("</div></div>", unsafe_allow_html=True)
     st.stop()
 
 
