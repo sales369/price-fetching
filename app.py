@@ -160,7 +160,7 @@ body{zoom:0.92}
 .navbar-uname{font-size:.82rem;font-weight:700;color:#1E40AF;font-family:'Sora',sans-serif}
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   NAV PILLS — all same height, no layout bug
+   NAV PILLS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .nav-pill > div > button,
 .nav-pill-active > div > button,
@@ -176,7 +176,6 @@ body{zoom:0.92}
   display:flex!important;align-items:center!important;
   position:relative!important;overflow:hidden!important;
 }
-/* ripple shimmer on hover for all nav buttons */
 .nav-pill > div > button::after,
 .nav-pill-active > div > button::after,
 .signout-pill > div > button::after,
@@ -231,7 +230,7 @@ body{zoom:0.92}
 .signout-pill>div,.refresh-pill>div{padding:0!important;margin:0!important}
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   MAIN CONTENT BUTTONS — premium interactive
+   MAIN CONTENT BUTTONS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .block-container{
   padding:0 2.5rem 3rem!important;max-width:100%!important;
@@ -392,7 +391,22 @@ label,.stTextInput label,.stSelectbox label,.stNumberInput label,.stFileUploader
 .badge-blue{background:#EFF6FF;color:#1E40AF;border:1px solid #BFDBFE}
 .badge-green{background:#ECFDF5;color:#059669;border:1px solid #A7F3D0}
 .badge-red{background:#FEF2F2;color:#DC2626;border:1px solid #FECACA}
+.badge-purple{background:#F5F3FF;color:#7C3AED;border:1px solid #DDD6FE}
 .part-col-label{font-size:.62rem;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:#64748B;padding-left:2px}
+
+/* ━━━ FORMAT TABS (upload page) ━━━ */
+.format-tab-row{display:flex;gap:10px;margin-bottom:18px}
+.format-tab{
+  flex:1;padding:14px 16px;border-radius:14px;cursor:pointer;
+  border:2px solid #E2E8F0;background:rgba(255,255,255,.7);
+  transition:all .18s;text-align:center;
+}
+.format-tab.active{
+  border-color:#1E40AF;background:linear-gradient(135deg,#EFF6FF,#F0F4FF);
+  box-shadow:0 4px 14px rgba(30,64,175,.12);
+}
+.format-tab-title{font-size:.82rem;font-weight:700;color:#0F172A;margin-bottom:3px}
+.format-tab-sub{font-size:.70rem;color:#94A3B8}
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    LOGIN CARD
@@ -583,6 +597,63 @@ def check_login(u, p):
 
 
 # ─────────────────────────────────────────────
+#  ★ NEW: CSV / EXCEL COLUMN NORMALISER
+#    Maps any of our known header variants →
+#    internal names: brand, part_no, price,
+#    supplier, currency, delivery_time
+# ─────────────────────────────────────────────
+# Extended alias list that covers:
+#   - original app headers  (Make / Brand, JPY Price …)
+#   - your processed CSV    (Brand / Make, Unit Price,
+#                            Supplier Name, Lead Time)
+COLUMN_ALIASES = {
+    "brand": [
+        "make", "brand", "manufacturer",
+        "makebrand", "brandmake", "brandorname",
+        "brandormodel", "brandbymake",
+    ],
+    "part_no": [
+        "partnumber", "partno", "part", "partnum",
+        "partnumbers", "itemcode", "itemno",
+    ],
+    "price": [
+        "jpyprice", "price", "unitprice", "jpy",
+        "jprice", "unitrate", "rate", "cost",
+    ],
+    "supplier": [
+        "supplier", "vendor", "source",
+        "suppliername", "vendorname",
+    ],
+    "currency": ["currency", "cur", "ccy"],
+    "delivery_time": [
+        "deliverytime", "delivery", "leadtime",
+        "deliverydays", "lead", "leadtimedelivery",
+    ],
+}
+
+def normalise_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Rename df columns to internal names using COLUMN_ALIASES."""
+    col_map = {clean_col(c): c for c in df.columns}
+    rename = {}
+    for target, aliases in COLUMN_ALIASES.items():
+        for alias in aliases:
+            if alias in col_map:
+                rename[col_map[alias]] = target
+                break
+    df.rename(columns=rename, inplace=True)
+    return df
+
+
+def load_upload_file(file) -> pd.DataFrame:
+    """Load either .xlsx or .csv and return a raw DataFrame."""
+    name = file.name.lower()
+    if name.endswith(".csv"):
+        return pd.read_csv(file, dtype=str)
+    else:
+        return pd.read_excel(file, dtype=str)
+
+
+# ─────────────────────────────────────────────
 #  LOGIN PAGE
 # ─────────────────────────────────────────────
 if st.session_state.user is None:
@@ -636,7 +707,6 @@ if st.session_state.user is None:
     st.stop()
 
 
-
 # inject live animated background elements
 st.markdown('''<div id="pd-grid"></div><div id="pd-diag"></div><div id="pd-particles"></div>
 <script>
@@ -670,7 +740,6 @@ nav_pages = ["Price Lookup","Saved Quotations"] + (["Data Upload","Access Contro
 nav_icons = {"Price Lookup":"📊","Saved Quotations":"📁","Data Upload":"📤","Access Control":"🔐"}
 user_initials = username[:2].upper()
 
-# ── Static brand bar (HTML only — no interactivity needed here) ──
 st.markdown(f"""
 <div class="top-navbar">
   <div class="navbar-brand">
@@ -689,10 +758,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── Interactive nav buttons row ──
-# Build columns: [nav buttons...] [spacer] [refresh] [signout]
 n_nav = len(nav_pages)
-# each nav pill ~150px, refresh ~52px, signout ~110px, rest is spacer
 col_widths = [1.5] * n_nav + [4, 0.6, 1.1]
 cols = st.columns(col_widths)
 
@@ -705,7 +771,6 @@ for i, p in enumerate(nav_pages):
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-# spacer col does nothing
 with cols[n_nav + 1]:
     st.markdown('<div class="refresh-pill">', unsafe_allow_html=True)
     if st.button("🔄", key="refresh_btn", help="Refresh brands"):
@@ -920,7 +985,7 @@ elif page == "Saved Quotations":
 
 
 # ═══════════════════════════════════════════
-#  PAGE: DATA UPLOAD
+#  PAGE: DATA UPLOAD  ★ UPDATED
 # ═══════════════════════════════════════════
 elif page == "Data Upload":
 
@@ -928,63 +993,146 @@ elif page == "Data Upload":
     <div class="page-header">
       <div class="ph-icon">📤</div>
       <div><div class="ph-title">Master Data Upload</div>
-           <div class="ph-sub">Upload Excel price sheets to update the parts database</div></div>
+           <div class="ph-sub">Upload price sheets (Excel or CSV) to update the parts database</div></div>
     </div>""", unsafe_allow_html=True)
 
+    # ── Accepted column guide ──
     st.markdown("""
     <div class="section-card">
-      <div class="section-label">Required Column Names</div>
-      <span class="badge badge-blue">Make / Brand</span>
-      <span class="badge badge-blue">Part Number</span>
-      <span class="badge badge-blue">JPY Price</span>
-      <span class="badge badge-blue">Supplier</span>
-      <span class="badge badge-blue">Currency</span>
-      <span class="badge badge-blue">Delivery Time</span>
-      <div style="font-size:.79rem;color:#64748B;margin-top:12px;line-height:1.7;">
-        Column names are <strong>case-insensitive</strong>. Same part uploaded again will <strong>update</strong> price — no duplicates. Currency and Delivery Time are optional.
+      <div class="section-label">Accepted Column Names (any format below works)</div>
+
+      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:4px;">
+
+        <div>
+          <div style="font-size:.68rem;font-weight:700;color:#7C3AED;letter-spacing:.10em;
+                      text-transform:uppercase;margin-bottom:8px;">📊 Excel Format</div>
+          <span class="badge badge-blue">Make / Brand</span>
+          <span class="badge badge-blue">Part Number</span>
+          <span class="badge badge-blue">JPY Price</span>
+          <span class="badge badge-blue">Supplier</span>
+          <span class="badge badge-blue">Currency</span>
+          <span class="badge badge-blue">Delivery Time</span>
+        </div>
+
+        <div style="border-left:1px solid #E2E8F0;margin:0 4px"></div>
+
+        <div>
+          <div style="font-size:.68rem;font-weight:700;color:#059669;letter-spacing:.10em;
+                      text-transform:uppercase;margin-bottom:8px;">📄 CSV Format (processed data)</div>
+          <span class="badge badge-green">Brand / Make</span>
+          <span class="badge badge-green">Part Number</span>
+          <span class="badge badge-green">Unit Price</span>
+          <span class="badge badge-green">Supplier Name</span>
+          <span class="badge badge-green">Currency</span>
+          <span class="badge badge-green">Lead Time</span>
+        </div>
+
+      </div>
+
+      <div style="font-size:.78rem;color:#64748B;margin-top:14px;line-height:1.7;
+                  padding:10px 14px;background:rgba(241,245,249,.7);border-radius:10px;">
+        ✅ &nbsp;Column names are <strong>case-insensitive</strong> — any spacing or slash variation is handled automatically.<br>
+        ✅ &nbsp;Same part + supplier uploaded again will <strong>update</strong> price, not create a duplicate.<br>
+        ✅ &nbsp;Both <strong>.xlsx</strong> and <strong>.csv</strong> files are accepted.
       </div>
     </div>""", unsafe_allow_html=True)
 
-    file=st.file_uploader("Upload Excel file (.xlsx)",type=["xlsx"])
-    if file:
-        df_raw=pd.read_excel(file,dtype=str)
-        col_map={clean_col(c):c for c in df_raw.columns}
-        ALIASES={"brand":["make","brand","manufacturer"],"part_no":["partnumber","partno","part","partnum","partnumbers"],
-                 "price":["jpyprice","price","unitprice","jpy","jprice","unitrate"],"supplier":["supplier","vendor","source"],
-                 "currency":["currency","cur","ccy"],"delivery_time":["deliverytime","delivery","leadtime","deliverydays"]}
-        rename={}
-        for target,aliases in ALIASES.items():
-            for alias in aliases:
-                if alias in col_map: rename[col_map[alias]]=target; break
-        df_raw.rename(columns=rename,inplace=True)
-        missing=[c for c in ["brand","part_no","price","supplier"] if c not in df_raw.columns]
-        if missing:
-            st.error(f"Could not map: **{missing}**  Detected: `{list(df_raw.columns)}`"); st.stop()
-        for col in ["brand","part_no","supplier"]:
-            df_raw[col]=df_raw[col].astype(str).str.replace(r'[\n"\r]','',regex=True).str.strip()
-        for col in ["currency","delivery_time"]:
-            if col not in df_raw.columns: df_raw[col]=""
-            else: df_raw[col]=df_raw[col].astype(str).str.replace(r'[\n"\r]','',regex=True).str.strip()
-        df_raw["price"]=pd.to_numeric(df_raw["price"],errors="coerce").fillna(0)
-        df_raw=df_raw[(df_raw["part_no"]!="")&(df_raw["brand"]!="")&(df_raw["supplier"]!="")
-                      &(df_raw["part_no"]!="nan")&(df_raw["brand"]!="nan")]
+    # ── File uploader — now accepts csv too ──
+    file = st.file_uploader(
+        "Upload Excel (.xlsx) or CSV (.csv) file",
+        type=["xlsx", "csv"]
+    )
 
+    if file:
+        # Load file based on extension
+        try:
+            df_raw = load_upload_file(file)
+        except Exception as e:
+            st.error(f"Could not read file: {e}")
+            st.stop()
+
+        # Normalise column names
+        df_raw = normalise_columns(df_raw)
+
+        # Check required columns are present
+        required = ["brand", "part_no", "price", "supplier"]
+        missing = [c for c in required if c not in df_raw.columns]
+        if missing:
+            st.error(
+                f"Could not map these required columns: **{missing}**\n\n"
+                f"Columns detected in file: `{list(df_raw.columns)}`\n\n"
+                "Please check the column names match one of the accepted formats above."
+            )
+            st.stop()
+
+        # Clean string columns
+        for col in ["brand", "part_no", "supplier"]:
+            df_raw[col] = (df_raw[col].astype(str)
+                           .str.replace(r'[\n"\r]', '', regex=True)
+                           .str.strip())
+
+        for col in ["currency", "delivery_time"]:
+            if col not in df_raw.columns:
+                df_raw[col] = ""
+            else:
+                df_raw[col] = (df_raw[col].astype(str)
+                               .str.replace(r'[\n"\r]', '', regex=True)
+                               .str.strip()
+                               .replace("nan", ""))
+
+        # Parse price
+        df_raw["price"] = pd.to_numeric(df_raw["price"], errors="coerce").fillna(0)
+
+        # Drop rows with blank key fields
+        df_raw = df_raw[
+            (df_raw["part_no"] != "") & (df_raw["part_no"] != "nan") &
+            (df_raw["brand"]   != "") & (df_raw["brand"]   != "nan") &
+            (df_raw["supplier"]!= "") & (df_raw["supplier"]!= "nan")
+        ]
+
+        # ── Preview ──
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown(f'<div class="section-label">Preview — {len(df_raw):,} valid rows</div>', unsafe_allow_html=True)
-        preview_cols=[c for c in ["brand","part_no","price","currency","delivery_time","supplier"] if c in df_raw.columns]
-        st.dataframe(df_raw[preview_cols].head(30),
-                     use_container_width=True, hide_index=True, height=280)
+
+        file_type_label = "CSV" if file.name.lower().endswith(".csv") else "Excel"
+        st.markdown(
+            f'<div class="section-label">Preview — {len(df_raw):,} valid rows '
+            f'<span class="badge badge-{"green" if file_type_label=="CSV" else "blue"}" '
+            f'style="margin-left:8px;">{file_type_label}</span></div>',
+            unsafe_allow_html=True
+        )
+
+        preview_cols = [c for c in ["brand","part_no","price","currency","delivery_time","supplier"]
+                        if c in df_raw.columns]
+        friendly_names = {
+            "brand": "Brand / Make", "part_no": "Part Number", "price": "Unit Price",
+            "currency": "Currency", "delivery_time": "Lead Time", "supplier": "Supplier Name"
+        }
+        st.dataframe(
+            df_raw[preview_cols].rename(columns=friendly_names).head(30),
+            use_container_width=True, hide_index=True, height=280
+        )
         st.markdown('</div>', unsafe_allow_html=True)
 
+        # ── Upload button ──
         if st.button(f"⬆ Upload {len(df_raw):,} Rows to Database"):
-            values=list(df_raw[["part_no","brand","price","supplier","currency","delivery_time"]].itertuples(index=False,name=None))
-            c=get_conn(); cur=c.cursor()
+            values = list(
+                df_raw[["part_no","brand","price","supplier","currency","delivery_time"]]
+                .itertuples(index=False, name=None)
+            )
+            c = get_conn(); cur = c.cursor()
             try:
-                execute_values(cur,"""
-                    INSERT INTO parts_table(part_no,brand,price,supplier,currency,delivery_time) VALUES %s
-                    ON CONFLICT(part_no,brand,supplier) DO UPDATE SET price=EXCLUDED.price,currency=EXCLUDED.currency,delivery_time=EXCLUDED.delivery_time
-                """,values,page_size=500)
-                c.commit(); fetch_brands.clear(); st.success(f"Uploaded {len(values):,} rows.")
+                execute_values(cur, """
+                    INSERT INTO parts_table(part_no,brand,price,supplier,currency,delivery_time)
+                    VALUES %s
+                    ON CONFLICT(part_no,brand,supplier)
+                    DO UPDATE SET
+                        price         = EXCLUDED.price,
+                        currency      = EXCLUDED.currency,
+                        delivery_time = EXCLUDED.delivery_time
+                """, values, page_size=500)
+                c.commit()
+                fetch_brands.clear()
+                st.success(f"✅ Successfully uploaded {len(values):,} rows to the database.")
             except Exception as e:
                 c.rollback(); st.error(f"Upload failed: {e}")
             finally:
