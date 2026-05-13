@@ -568,22 +568,47 @@ def lookup_prices(items):
     try:
         for r in items:
             part=r["part_no"].strip(); brand=r["brand"].strip(); qty=max(int(r.get("qty") or 1),1)
-            if not part or not brand: continue
-            cur.execute("""
-                SELECT supplier,price,currency,delivery_time FROM parts_table
-                WHERE TRIM(LOWER(part_no))=TRIM(LOWER(%s)) AND TRIM(LOWER(brand))=TRIM(LOWER(%s))
-                ORDER BY price ASC
-            """, (part,brand))
+            if not brand: continue
+            
+            # UPDATED: Logical switch for Brand-only vs Part+Brand
+            if part:
+                cur.execute("""
+                    SELECT part_no, supplier, price, currency, delivery_time FROM parts_table
+                    WHERE TRIM(LOWER(part_no))=TRIM(LOWER(%s)) AND TRIM(LOWER(brand))=TRIM(LOWER(%s))
+                    ORDER BY price ASC
+                """, (part,brand))
+            else:
+                cur.execute("""
+                    SELECT part_no, supplier, price, currency, delivery_time FROM parts_table
+                    WHERE TRIM(LOWER(brand))=TRIM(LOWER(%s))
+                    ORDER BY part_no ASC, price ASC
+                """, (brand,))
+                
             rows=cur.fetchall()
             if rows:
-                for supplier,price,currency,delivery_time in rows:
-                    results.append({"Brand":brand,"Part No":part,"Supplier":supplier,
-                                    "Currency":currency or "","Delivery Time":delivery_time or "",
-                                    "Qty":qty,"Unit Price":float(price),"Amount":qty*float(price)})
+                for db_part, supplier,price,currency,delivery_time in rows:
+                    results.append({
+                        "Brand": brand,
+                        "Part No": db_part, # Use actual part number from DB
+                        "Supplier": supplier,
+                        "Currency": currency or "",
+                        "Delivery Time": delivery_time or "",
+                        "Qty": qty,
+                        "Unit Price": float(price),
+                        "Amount": qty * float(price)
+                    })
             else:
-                results.append({"Brand":brand,"Part No":part,"Supplier":"Not Found",
-                                "Currency":"","Delivery Time":"",
-                                "Qty":qty,"Unit Price":0.0,"Amount":0.0})
+                # Handle Not Found Case
+                results.append({
+                    "Brand": brand,
+                    "Part No": part if part else "N/A",
+                    "Supplier": "Not Found",
+                    "Currency": "",
+                    "Delivery Time": "",
+                    "Qty": qty,
+                    "Unit Price": 0.0,
+                    "Amount": 0.0
+                })
     finally:
         release(c)
     return results
@@ -819,13 +844,13 @@ if page == "Price Lookup":
     <div class="page-header">
       <div class="ph-icon">📊</div>
       <div><div class="ph-title">Price Lookup</div>
-           <div class="ph-sub">Search parts across all suppliers instantly</div></div>
+           <div class="ph-sub">Search specific parts or browse entire brands instantly</div></div>
     </div>""", unsafe_allow_html=True)
 
     brand_list = fetch_brands()
 
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-label">Enter Parts to Search</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-label">Enter Brands or Parts to Search</div>', unsafe_allow_html=True)
 
     ca, cb, cc, _ = st.columns([0.9,0.9,1,5])
     with ca:
@@ -845,7 +870,7 @@ if page == "Price Lookup":
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
     h1,h2,h3,_ = st.columns([1.6,2.2,0.8,0.6])
     with h1: st.markdown('<div class="part-col-label">Brand</div>', unsafe_allow_html=True)
-    with h2: st.markdown('<div class="part-col-label">Part Number</div>', unsafe_allow_html=True)
+    with h2: st.markdown('<div class="part-col-label">Part Number (Leave blank to see all)</div>', unsafe_allow_html=True)
     with h3: st.markdown('<div class="part-col-label">Qty</div>', unsafe_allow_html=True)
 
     n = st.session_state.num_rows
@@ -866,13 +891,15 @@ if page == "Price Lookup":
         for i in range(n):
             b=st.session_state.get(f"brand_{i}",""); p=st.session_state.get(f"part_{i}","").strip()
             q=st.session_state.get(f"qty_{i}",1)
-            if b and b!="" and p: items.append({"brand":b,"part_no":p,"qty":q})
+            # Accept even if part number is empty to allow brand search
+            if b and b!="": items.append({"brand":b,"part_no":p,"qty":q})
+            
         if items:
             with st.spinner("Fetching prices…"):
                 results=lookup_prices(items)
             st.session_state.table_data=pd.DataFrame(results)
         else:
-            st.warning("Please enter at least one Brand and Part No.")
+            st.warning("Please select at least one Brand.")
 
     df = st.session_state.table_data
 
@@ -883,10 +910,10 @@ if page == "Price Lookup":
 
         st.markdown(f"""
         <div class="metric-row">
-          <div class="metric-card"><div class="mc-label">Parts Searched</div><div class="mc-value">{n_parts}</div><div class="mc-sub">unique part numbers</div></div>
-          <div class="metric-card"><div class="mc-label">Suppliers Found</div><div class="mc-value">{n_suppliers}</div><div class="mc-sub">across all parts</div></div>
+          <div class="metric-card"><div class="mc-label">Unique Items</div><div class="mc-value">{n_parts}</div><div class="mc-sub">different part numbers</div></div>
+          <div class="metric-card"><div class="mc-label">Suppliers Found</div><div class="mc-value">{n_suppliers}</div><div class="mc-sub">across selection</div></div>
           <div class="metric-card"><div class="mc-label">Best Unit Price</div><div class="mc-value">{best_price:,.0f}</div><div class="mc-sub">lowest unit price</div></div>
-          <div class="metric-card"><div class="mc-label">Price Records</div><div class="mc-value">{n_records}</div><div class="mc-sub">supplier rows returned</div></div>
+          <div class="metric-card"><div class="mc-label">Offer Records</div><div class="mc-value">{n_records}</div><div class="mc-sub">total supplier rows</div></div>
         </div>""", unsafe_allow_html=True)
 
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
@@ -894,6 +921,7 @@ if page == "Price Lookup":
 
         def highlight_rows(row):
             if row["Supplier"]=="Not Found": return ["background-color:#FEF2F2;color:#991B1B"]*len(row)
+            # Find cheapest price for this specific part number
             mask=(df["Part No"]==row["Part No"])&(df["Brand"]==row["Brand"])
             valid=df.loc[mask&(df["Supplier"]!="Not Found"),"Unit Price"]
             if not valid.empty and row["Unit Price"]==valid.min():
@@ -905,8 +933,8 @@ if page == "Price Lookup":
         st.dataframe(styled, use_container_width=True, hide_index=True, height=360)
         st.markdown("""
         <div style="display:flex;gap:16px;margin-top:10px;font-size:.74rem;color:#64748B;">
-          <span><span class="badge badge-green">Green</span> Cheapest for that part</span>
-          <span><span class="badge badge-red">Red</span> Not found in database</span>
+          <span><span class="badge badge-green">Green</span> Cheapest version of that specific part</span>
+          <span><span class="badge badge-red">Red</span> Brand/Part not found in database</span>
         </div>""", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1133,7 +1161,7 @@ elif page == "Data Upload":
             )
             st.stop()
 
-        # ★ Apply Brand Normalisation Fix ★
+        # Apply Brand Normalisation Fix
         df_raw = normalise_brands(df_raw)
 
         # Clean string columns
@@ -1161,7 +1189,7 @@ elif page == "Data Upload":
             (df_raw["supplier"]!= "") & (df_raw["supplier"]!= "nan")
         ]
 
-        # ★ Prevent ON CONFLICT DO UPDATE duplicate row error
+        # FIX: Prevent ON CONFLICT DO UPDATE duplicate row error
         df_raw = df_raw.drop_duplicates(subset=["part_no", "brand", "supplier"], keep="last")
 
         # ── Preview ──
@@ -1194,11 +1222,10 @@ elif page == "Data Upload":
                 .itertuples(index=False, name=None)
             )
             total   = len(values)
-            chunk   = 50  # Reduced for smoother real-time progress bar updates
+            chunk   = 50  # Reduced for smoother updates
             chunks  = [values[i:i+chunk] for i in range(0, total, chunk)]
             n_chunks = len(chunks)
 
-            # Progress UI
             st.markdown("""
             <div style="font-size:.82rem;font-weight:600;color:#1E40AF;margin-bottom:6px;">
               📤 Uploading to database…
@@ -1230,8 +1257,6 @@ elif page == "Data Upload":
                         f"({pct}%)</div>",
                         unsafe_allow_html=True
                     )
-                    
-                    # Force Streamlit to render this frame to the browser for real-time tracking
                     time.sleep(0.02)
                     
                 c.commit()
