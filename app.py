@@ -27,6 +27,9 @@ for k, v in {
     "page": "Price Lookup",
     "table_data": pd.DataFrame(),
     "num_rows": 3,
+    "fs_pl": False,  # Fullscreen Price Lookup toggle
+    "fs_sq": False,  # Fullscreen Saved Quotations toggle
+    "fs_up": False,  # Fullscreen Upload Preview toggle
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -842,6 +845,31 @@ page = st.session_state.page
 # ═══════════════════════════════════════════
 if page == "Price Lookup":
 
+    df = st.session_state.table_data
+
+    # ★ FULLSCREEN INTERCEPTOR (PRICE LOOKUP) ★
+    if st.session_state.fs_pl and not df.empty:
+        st.markdown("<style>header, .top-navbar {display:none!important;} .block-container{padding-top:1.5rem!important; max-width:98%!important;}</style>", unsafe_allow_html=True)
+        c1, c2 = st.columns([9, 1])
+        c1.markdown("<h3 style='margin:0; padding-bottom:12px; color:#1E40AF; font-family:Sora;'>⛶ Full Screen Price View</h3>", unsafe_allow_html=True)
+        if c2.button("✕ Close Fullscreen", use_container_width=True):
+            st.session_state.fs_pl = False
+            st.rerun()
+
+        def highlight_rows_fs(row):
+            if row["Supplier"]=="Not Found": return ["background-color:#FEF2F2;color:#991B1B"]*len(row)
+            mask=(df["Part No"]==row["Part No"])&(df["Brand"]==row["Brand"])
+            valid=df.loc[mask&(df["Supplier"]!="Not Found"),"Unit Price"]
+            if not valid.empty and row["Unit Price"]==valid.min():
+                return ["background-color:#F0FDF4;color:#065F46;font-weight:600"]*len(row)
+            return [""]*len(row)
+
+        styled_fs = (df.style.apply(highlight_rows_fs,axis=1).format({"Unit Price":"{:,.0f}","Amount":"{:,.0f}"}))
+        st.dataframe(styled_fs, use_container_width=True, hide_index=True, height=800)
+        st.stop()  # Prevents the normal page UI from rendering below
+
+
+    # --- Normal UI Flow ---
     st.markdown("""
     <div class="page-header">
       <div class="ph-icon">📊</div>
@@ -900,10 +928,10 @@ if page == "Price Lookup":
             with st.spinner("Fetching prices…"):
                 results=lookup_prices(items)
             st.session_state.table_data=pd.DataFrame(results)
+            st.rerun()
         else:
             st.warning("Please select at least one Brand.")
 
-    df = st.session_state.table_data
 
     if not df.empty:
         found=df[df["Supplier"]!="Not Found"]
@@ -920,14 +948,14 @@ if page == "Price Lookup":
 
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         
-        # ★ MAXIMIZE TABLE TOGGLE (PRICE LOOKUP) ★
+        # ★ FULL SCREEN VIEW BUTTON (PRICE LOOKUP) ★
         c_hdr1, c_hdr2 = st.columns([6, 1])
         with c_hdr1:
             st.markdown('<div class="section-label">All Supplier Prices</div>', unsafe_allow_html=True)
         with c_hdr2:
-            max_pl = st.toggle("⛶ Expand Table", key="max_pl")
-            
-        tbl_height = 800 if max_pl else 360
+            if st.button("⛶ Full Screen", key="btn_fs_pl", use_container_width=True):
+                st.session_state.fs_pl = True
+                st.rerun()
 
         def highlight_rows(row):
             if row["Supplier"]=="Not Found": return ["background-color:#FEF2F2;color:#991B1B"]*len(row)
@@ -937,9 +965,9 @@ if page == "Price Lookup":
                 return ["background-color:#F0FDF4;color:#065F46;font-weight:600"]*len(row)
             return [""]*len(row)
 
-        styled=(df.style.apply(highlight_rows,axis=1)
-                  .format({"Unit Price":"{:,.0f}","Amount":"{:,.0f}"}))
-        st.dataframe(styled, use_container_width=True, hide_index=True, height=tbl_height)
+        styled=(df.style.apply(highlight_rows,axis=1).format({"Unit Price":"{:,.0f}","Amount":"{:,.0f}"}))
+        st.dataframe(styled, use_container_width=True, hide_index=True, height=360)
+        
         st.markdown("""
         <div style="display:flex;gap:16px;margin-top:10px;font-size:.74rem;color:#64748B;">
           <span><span class="badge badge-green">Green</span> Cheapest version of that specific part</span>
@@ -973,13 +1001,6 @@ if page == "Price Lookup":
 # ═══════════════════════════════════════════
 elif page == "Saved Quotations":
 
-    st.markdown("""
-    <div class="page-header">
-      <div class="ph-icon">📁</div>
-      <div><div class="ph-title">Saved Quotations</div>
-           <div class="ph-sub">View, download and manage past quotations</div></div>
-    </div>""", unsafe_allow_html=True)
-
     c=get_conn(); cur=c.cursor()
     try:
         cur.execute("SELECT id,username,data,created_at::date FROM saved_offers ORDER BY created_at DESC")
@@ -988,6 +1009,12 @@ elif page == "Saved Quotations":
         release(c)
 
     if not rows:
+        st.markdown("""
+        <div class="page-header">
+          <div class="ph-icon">📁</div>
+          <div><div class="ph-title">Saved Quotations</div>
+               <div class="ph-sub">View, download and manage past quotations</div></div>
+        </div>""", unsafe_allow_html=True)
         st.markdown("""
         <div class="section-card" style="text-align:center;padding:60px 24px;">
           <div style="font-size:2.8rem;margin-bottom:12px;">📭</div>
@@ -1003,6 +1030,30 @@ elif page == "Saved Quotations":
         all_data.append(df_o)
     final_df=pd.concat(all_data,ignore_index=True)
 
+    display_df=final_df.drop(columns=["_offer_id"],errors="ignore").copy()
+    display_df.insert(0,"Select",False)
+
+    # ★ FULLSCREEN INTERCEPTOR (SAVED QUOTATIONS) ★
+    if st.session_state.fs_sq:
+        st.markdown("<style>header, .top-navbar {display:none!important;} .block-container{padding-top:1.5rem!important; max-width:98%!important;}</style>", unsafe_allow_html=True)
+        c1, c2 = st.columns([9, 1])
+        c1.markdown("<h3 style='margin:0; padding-bottom:12px; color:#1E40AF; font-family:Sora;'>⛶ Full Screen Records</h3>", unsafe_allow_html=True)
+        if c2.button("✕ Close Fullscreen", use_container_width=True):
+            st.session_state.fs_sq = False
+            st.rerun()
+            
+        # Display large non-editable table in fullscreen
+        st.dataframe(display_df.drop(columns=["Select"]), use_container_width=True, hide_index=True, height=800)
+        st.stop()
+
+    # --- Normal UI Flow ---
+    st.markdown("""
+    <div class="page-header">
+      <div class="ph-icon">📁</div>
+      <div><div class="ph-title">Saved Quotations</div>
+           <div class="ph-sub">View, download and manage past quotations</div></div>
+    </div>""", unsafe_allow_html=True)
+
     st.markdown(f"""
     <div class="metric-row">
       <div class="metric-card"><div class="mc-label">Total Quotations</div><div class="mc-value">{len(rows)}</div><div class="mc-sub">saved records</div></div>
@@ -1010,20 +1061,18 @@ elif page == "Saved Quotations":
       <div class="metric-card"><div class="mc-label">Latest Save</div><div class="mc-value" style="font-size:1rem;">{str(rows[0][3])}</div><div class="mc-sub">most recent</div></div>
     </div>""", unsafe_allow_html=True)
 
-    display_df=final_df.drop(columns=["_offer_id"],errors="ignore").copy()
-    display_df.insert(0,"Select",False)
-
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     
-    # ★ MAXIMIZE TABLE TOGGLE (SAVED QUOTATIONS) ★
+    # ★ FULL SCREEN VIEW BUTTON (SAVED QUOTATIONS) ★
     c_hdr1, c_hdr2 = st.columns([6, 1])
     with c_hdr1:
         st.markdown('<div class="section-label">All Records</div>', unsafe_allow_html=True)
     with c_hdr2:
-        max_sq = st.toggle("⛶ Expand Table", key="max_sq")
-        
-    tbl_height2 = 800 if max_sq else 400
-    edited_df=st.data_editor(display_df, use_container_width=True, hide_index=True, height=tbl_height2, key="saved_editor")
+        if st.button("⛶ Full Screen", key="btn_fs_sq", use_container_width=True):
+            st.session_state.fs_sq = True
+            st.rerun()
+            
+    edited_df=st.data_editor(display_df, use_container_width=True, hide_index=True, height=400, key="saved_editor")
     st.markdown('</div>', unsafe_allow_html=True)
 
     b1,b2,_ = st.columns([1.3,1.3,5])
@@ -1224,12 +1273,31 @@ elif page == "Data Upload":
         # Prevent ON CONFLICT DO UPDATE duplicate row error
         df_raw = df_raw.drop_duplicates(subset=["part_no", "brand", "supplier"], keep="last")
 
+        preview_cols = [c for c in ["brand","part_no","price","currency","delivery_time","source_email","supplier"]
+                        if c in df_raw.columns]
+        friendly_names = {
+            "brand": "Brand / Make", "part_no": "Part Number", "price": "Unit Price",
+            "currency": "Currency", "delivery_time": "Lead Time", 
+            "source_email": "Source Email", "supplier": "Supplier Name"
+        }
+
+        # ★ FULLSCREEN INTERCEPTOR (DATA UPLOAD PREVIEW) ★
+        if st.session_state.fs_up:
+            st.markdown("<style>header, .top-navbar {display:none!important;} .block-container{padding-top:1.5rem!important; max-width:98%!important;}</style>", unsafe_allow_html=True)
+            c1, c2 = st.columns([9, 1])
+            c1.markdown("<h3 style='margin:0; padding-bottom:12px; color:#1E40AF; font-family:Sora;'>⛶ Full Screen Data Preview</h3>", unsafe_allow_html=True)
+            if c2.button("✕ Close Fullscreen", use_container_width=True):
+                st.session_state.fs_up = False
+                st.rerun()
+            st.dataframe(df_raw[preview_cols].rename(columns=friendly_names), use_container_width=True, hide_index=True, height=800)
+            st.stop()
+
+
         # ── Preview ──
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
-
         file_type_label = "CSV" if file.name.lower().endswith(".csv") else "Excel"
         
-        # ★ MAXIMIZE TABLE TOGGLE (DATA UPLOAD PREVIEW) ★
+        # ★ FULL SCREEN VIEW BUTTON (DATA UPLOAD) ★
         c_hdr1, c_hdr2 = st.columns([6, 1])
         with c_hdr1:
             st.markdown(
@@ -1239,20 +1307,13 @@ elif page == "Data Upload":
                 unsafe_allow_html=True
             )
         with c_hdr2:
-            max_up = st.toggle("⛶ Expand Table", key="max_up")
+            if st.button("⛶ Full Screen", key="btn_fs_up", use_container_width=True):
+                st.session_state.fs_up = True
+                st.rerun()
             
-        tbl_height3 = 800 if max_up else 280
-
-        preview_cols = [c for c in ["brand","part_no","price","currency","delivery_time","source_email","supplier"]
-                        if c in df_raw.columns]
-        friendly_names = {
-            "brand": "Brand / Make", "part_no": "Part Number", "price": "Unit Price",
-            "currency": "Currency", "delivery_time": "Lead Time", 
-            "source_email": "Source Email", "supplier": "Supplier Name"
-        }
         st.dataframe(
-            df_raw[preview_cols].rename(columns=friendly_names).head(200 if max_up else 30),
-            use_container_width=True, hide_index=True, height=tbl_height3
+            df_raw[preview_cols].rename(columns=friendly_names).head(30),
+            use_container_width=True, hide_index=True, height=280
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
