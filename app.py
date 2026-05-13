@@ -7,7 +7,7 @@ import json
 from io import BytesIO
 import os
 import re
-import time  # <-- Added for real-time progress bar UI updates
+import time
 
 # ─────────────────────────────────────────────
 #  PAGE CONFIG
@@ -986,7 +986,7 @@ elif page == "Saved Quotations":
 
 
 # ═══════════════════════════════════════════
-#  PAGE: DATA UPLOAD
+#  PAGE: DATA UPLOAD  ★ UPDATED
 # ═══════════════════════════════════════════
 elif page == "Data Upload":
 
@@ -1139,7 +1139,7 @@ elif page == "Data Upload":
             (df_raw["supplier"]!= "") & (df_raw["supplier"]!= "nan")
         ]
 
-        # 🌟 Keep the last occurrence of any duplicate row
+        # ★ FIX: Prevent ON CONFLICT DO UPDATE duplicate row error
         df_raw = df_raw.drop_duplicates(subset=["part_no", "brand", "supplier"], keep="last")
 
         # ── Preview ──
@@ -1172,7 +1172,7 @@ elif page == "Data Upload":
                 .itertuples(index=False, name=None)
             )
             total   = len(values)
-            chunk   = 50  # <-- Reduced from 100 to force more frequent UI updates
+            chunk   = 50  # Reduced for smoother real-time progress bar updates
             chunks  = [values[i:i+chunk] for i in range(0, total, chunk)]
             n_chunks = len(chunks)
 
@@ -1209,8 +1209,8 @@ elif page == "Data Upload":
                         unsafe_allow_html=True
                     )
                     
-                    # <-- Force Streamlit to render this frame to the browser
-                    time.sleep(0.02) 
+                    # Force Streamlit to render this frame to the browser for real-time tracking
+                    time.sleep(0.02)
                     
                 c.commit()
                 fetch_brands.clear()
