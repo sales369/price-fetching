@@ -849,8 +849,21 @@ if page == "Price Lookup":
 
     # ★ FULLSCREEN INTERCEPTOR (PRICE LOOKUP) ★
     if st.session_state.fs_pl and not df.empty:
-        st.markdown("<style>header, .top-navbar {display:none!important;} .block-container{padding-top:1.5rem!important; max-width:98%!important;}</style>", unsafe_allow_html=True)
-        c1, c2 = st.columns([9, 1])
+        st.markdown("""
+        <style>
+        /* Nuke the navbar, header, footer and force absolute edge-to-edge width */
+        header, .top-navbar, [data-testid="stHeader"], footer {display:none!important;}
+        .main .block-container {
+            padding: 1rem !important;
+            max-width: 100% !important;
+            width: 100vw !important;
+            margin: 0 !important;
+        }
+        [data-testid="stDataFrame"] { width: 100% !important; }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        c1, c2 = st.columns([10, 1])
         c1.markdown("<h3 style='margin:0; padding-bottom:12px; color:#1E40AF; font-family:Sora;'>⛶ Full Screen Price View</h3>", unsafe_allow_html=True)
         if c2.button("✕ Close Fullscreen", use_container_width=True):
             st.session_state.fs_pl = False
@@ -865,7 +878,7 @@ if page == "Price Lookup":
             return [""]*len(row)
 
         styled_fs = (df.style.apply(highlight_rows_fs,axis=1).format({"Unit Price":"{:,.0f}","Amount":"{:,.0f}"}))
-        st.dataframe(styled_fs, use_container_width=True, hide_index=True, height=800)
+        st.dataframe(styled_fs, use_container_width=True, hide_index=True, height=850)
         st.stop()  # Prevents the normal page UI from rendering below
 
 
@@ -931,7 +944,6 @@ if page == "Price Lookup":
             st.rerun()
         else:
             st.warning("Please select at least one Brand.")
-
 
     if not df.empty:
         found=df[df["Supplier"]!="Not Found"]
@@ -1035,15 +1047,26 @@ elif page == "Saved Quotations":
 
     # ★ FULLSCREEN INTERCEPTOR (SAVED QUOTATIONS) ★
     if st.session_state.fs_sq:
-        st.markdown("<style>header, .top-navbar {display:none!important;} .block-container{padding-top:1.5rem!important; max-width:98%!important;}</style>", unsafe_allow_html=True)
-        c1, c2 = st.columns([9, 1])
+        st.markdown("""
+        <style>
+        header, .top-navbar, [data-testid="stHeader"], footer {display:none!important;}
+        .main .block-container {
+            padding: 1rem !important;
+            max-width: 100% !important;
+            width: 100vw !important;
+            margin: 0 !important;
+        }
+        [data-testid="stDataFrame"] { width: 100% !important; }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        c1, c2 = st.columns([10, 1])
         c1.markdown("<h3 style='margin:0; padding-bottom:12px; color:#1E40AF; font-family:Sora;'>⛶ Full Screen Records</h3>", unsafe_allow_html=True)
         if c2.button("✕ Close Fullscreen", use_container_width=True):
             st.session_state.fs_sq = False
             st.rerun()
             
-        # Display large non-editable table in fullscreen
-        st.dataframe(display_df.drop(columns=["Select"]), use_container_width=True, hide_index=True, height=800)
+        st.dataframe(display_df.drop(columns=["Select"]), use_container_width=True, hide_index=True, height=850)
         st.stop()
 
     # --- Normal UI Flow ---
@@ -1114,112 +1137,44 @@ elif page == "Data Upload":
         st.error("⛔ Access Denied. Administrator privileges required to view this page.")
         st.stop()
 
-    st.markdown("""
-    <div class="page-header">
-      <div class="ph-icon">📤</div>
-      <div><div class="ph-title">Master Data Upload</div>
-           <div class="ph-sub">Upload price sheets (Excel or CSV) to update the parts database</div></div>
-    </div>""", unsafe_allow_html=True)
-
     # ── Accepted column guide ──
-    import streamlit.components.v1 as components
-    components.html("""
+    guide_html = """
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
       * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
       .guide-card {
-        background: rgba(255,255,255,0.85);
-        border: 1px solid rgba(255,255,255,0.96);
-        border-radius: 20px;
-        padding: 20px 24px 22px;
-        box-shadow: 0 4px 24px rgba(30,64,175,0.08);
+        background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.96);
+        border-radius: 20px; padding: 20px 24px 22px; box-shadow: 0 4px 24px rgba(30,64,175,0.08);
       }
-      .guide-label {
-        font-size: 10px; font-weight: 700; letter-spacing: .15em;
-        text-transform: uppercase; color: #94A3B8;
-        margin-bottom: 14px; padding-bottom: 10px;
-        border-bottom: 1px solid #F1F5F9;
-      }
-      .cols-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
-      .badge {
-        display: inline-block; padding: 5px 14px; border-radius: 20px;
-        font-size: 12px; font-weight: 700; margin: 3px 3px 4px 0;
-      }
-      .badge-blue  { background:#EFF6FF; color:#1E40AF; border:1px solid #BFDBFE; }
+      .guide-label { font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: #94A3B8; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #F1F5F9; }
+      .badge { display: inline-block; padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; margin: 3px 3px 4px 0; }
       .req  { background:#FFF7ED; color:#C2410C; border:1px solid #FED7AA; }
       .opt  { background:#F0FDF4; color:#15803D; border:1px solid #BBF7D0; }
       .col-table { width:100%; border-collapse:collapse; margin-top:4px; }
-      .col-table th {
-        text-align:left; font-size:10px; font-weight:700; letter-spacing:.10em;
-        text-transform:uppercase; color:#94A3B8; padding:0 8px 8px 0;
-      }
-      .col-table td { padding: 5px 8px 5px 0; font-size:12px; vertical-align:middle; }
-      .col-table tr:not(:last-child) td { border-bottom: 1px solid #F1F5F9; }
+      .col-table th { text-align:left; font-size:10px; font-weight:700; letter-spacing:.10em; text-transform:uppercase; color:#94A3B8; padding:0 8px 8px 0; }
+      .col-table td { padding: 5px 8px 5px 0; font-size:12px; vertical-align:middle; border-bottom: 1px solid #F1F5F9; }
       .col-name { font-weight:700; color:#0F172A; font-family:monospace; font-size:13px; }
       .col-desc { color:#64748B; }
-      .info-box {
-        font-size: 12px; color: #64748B; margin-top: 16px; line-height: 1.75;
-        padding: 10px 14px; background: rgba(241,245,249,0.8); border-radius: 10px;
-      }
-      .info-box strong { color: #374151; }
+      .info-box { font-size: 12px; color: #64748B; margin-top: 16px; line-height: 1.75; padding: 10px 14px; background: rgba(241,245,249,0.8); border-radius: 10px; }
     </style>
     <div class="guide-card">
       <div class="guide-label">Required Excel Column Headers</div>
       <table class="col-table">
-        <tr>
-          <th>Column Header (exact)</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-        <tr>
-          <td><span class="col-name">Supplier Name</span></td>
-          <td><span class="badge req">Required</span></td>
-          <td class="col-desc">Name of the vendor / supplier</td>
-        </tr>
-        <tr>
-          <td><span class="col-name">Brand / Make</span></td>
-          <td><span class="badge req">Required</span></td>
-          <td class="col-desc">Brand or manufacturer of the part</td>
-        </tr>
-        <tr>
-          <td><span class="col-name">Part Number</span></td>
-          <td><span class="badge req">Required</span></td>
-          <td class="col-desc">Unique part / item code</td>
-        </tr>
-        <tr>
-          <td><span class="col-name">Unit Price</span></td>
-          <td><span class="badge req">Required</span></td>
-          <td class="col-desc">Price per unit (numeric)</td>
-        </tr>
-        <tr>
-          <td><span class="col-name">Currency</span></td>
-          <td><span class="badge opt">Optional</span></td>
-          <td class="col-desc">e.g. INR, USD, EUR</td>
-        </tr>
-        <tr>
-          <td><span class="col-name">Lead Time</span></td>
-          <td><span class="badge opt">Optional</span></td>
-          <td class="col-desc">Delivery / lead time details</td>
-        </tr>
-        <tr>
-          <td><span class="col-name">Source Email</span></td>
-          <td><span class="badge opt">Optional</span></td>
-          <td class="col-desc">Supplier contact email</td>
-        </tr>
+        <tr><th>Column Header (exact)</th><th>Type</th><th>Description</th></tr>
+        <tr><td><span class="col-name">Supplier Name</span></td><td><span class="badge req">Required</span></td><td class="col-desc">Name of the vendor / supplier</td></tr>
+        <tr><td><span class="col-name">Brand / Make</span></td><td><span class="badge req">Required</span></td><td class="col-desc">Brand or manufacturer of the part</td></tr>
+        <tr><td><span class="col-name">Part Number</span></td><td><span class="badge req">Required</span></td><td class="col-desc">Unique part / item code</td></tr>
+        <tr><td><span class="col-name">Unit Price</span></td><td><span class="badge req">Required</span></td><td class="col-desc">Price per unit (numeric)</td></tr>
+        <tr><td><span class="col-name">Currency</span></td><td><span class="badge opt">Optional</span></td><td class="col-desc">e.g. INR, USD, EUR</td></tr>
+        <tr><td><span class="col-name">Lead Time</span></td><td><span class="badge opt">Optional</span></td><td class="col-desc">Delivery / lead time details</td></tr>
+        <tr><td><span class="col-name">Source Email</span></td><td><span class="badge opt">Optional</span></td><td class="col-desc">Supplier contact email</td></tr>
       </table>
-      <div class="info-box">
-        ✅ &nbsp;Column names are <strong>case-insensitive</strong> — spacing variations are handled automatically.<br>
-        ✅ &nbsp;Same part + supplier uploaded again will <strong>update</strong> the price, not create a duplicate.<br>
-        ✅ &nbsp;Both <strong>.xlsx</strong> and <strong>.csv</strong> files are accepted.
-      </div>
+      <div class="info-box">✅ &nbsp;Column names are <strong>case-insensitive</strong>.<br>✅ &nbsp;Same part + supplier uploaded again will <strong>update</strong> the price.<br>✅ &nbsp;Both <strong>.xlsx</strong> and <strong>.csv</strong> files are accepted.</div>
     </div>
-    """, height=350)
+    """
 
     # ── File uploader ──
-    file = st.file_uploader(
-        "Upload Excel (.xlsx) or CSV (.csv) file",
-        type=["xlsx", "csv"]
-    )
+    file = st.file_uploader("Upload Excel (.xlsx) or CSV (.csv) file", type=["xlsx", "csv"])
 
     if file:
         try:
@@ -1228,72 +1183,66 @@ elif page == "Data Upload":
             st.error(f"Could not read file: {e}")
             st.stop()
 
-        # Normalise column names
         df_raw = normalise_columns(df_raw)
-
-        # Check required columns
         required = ["brand", "part_no", "price", "supplier"]
         missing = [c for c in required if c not in df_raw.columns]
         if missing:
-            st.error(
-                f"Could not map these required columns: **{missing}**\n\n"
-                f"Columns detected in file: `{list(df_raw.columns)}`\n\n"
-                "Please check the column names match one of the accepted formats above."
-            )
+            st.error(f"Could not map these required columns: **{missing}**\n\nPlease check the column names match.")
             st.stop()
 
-        # Apply Brand Normalisation Fix
         df_raw = normalise_brands(df_raw)
 
-        # Clean string columns
         for col in ["brand", "part_no", "supplier"]:
-            df_raw[col] = (df_raw[col].astype(str)
-                           .str.replace(r'[\n"\r]', '', regex=True)
-                           .str.strip())
-
+            df_raw[col] = df_raw[col].astype(str).str.replace(r'[\n"\r]', '', regex=True).str.strip()
         for col in ["currency", "delivery_time", "source_email"]:
             if col not in df_raw.columns:
                 df_raw[col] = ""
             else:
-                df_raw[col] = (df_raw[col].astype(str)
-                               .str.replace(r'[\n"\r]', '', regex=True)
-                               .str.strip()
-                               .replace("nan", ""))
+                df_raw[col] = df_raw[col].astype(str).str.replace(r'[\n"\r]', '', regex=True).str.strip().replace("nan", "")
 
-        # Parse price
         df_raw["price"] = pd.to_numeric(df_raw["price"], errors="coerce").fillna(0)
-
-        # Drop rows with blank key fields
-        df_raw = df_raw[
-            (df_raw["part_no"] != "") & (df_raw["part_no"] != "nan") &
-            (df_raw["brand"]   != "") & (df_raw["brand"]   != "nan") &
-            (df_raw["supplier"]!= "") & (df_raw["supplier"]!= "nan")
-        ]
-
-        # Prevent ON CONFLICT DO UPDATE duplicate row error
+        df_raw = df_raw[(df_raw["part_no"] != "") & (df_raw["part_no"] != "nan") & 
+                        (df_raw["brand"] != "") & (df_raw["brand"] != "nan") & 
+                        (df_raw["supplier"]!= "") & (df_raw["supplier"]!= "nan")]
         df_raw = df_raw.drop_duplicates(subset=["part_no", "brand", "supplier"], keep="last")
 
-        preview_cols = [c for c in ["brand","part_no","price","currency","delivery_time","source_email","supplier"]
-                        if c in df_raw.columns]
-        friendly_names = {
-            "brand": "Brand / Make", "part_no": "Part Number", "price": "Unit Price",
-            "currency": "Currency", "delivery_time": "Lead Time", 
-            "source_email": "Source Email", "supplier": "Supplier Name"
-        }
+        preview_cols = [c for c in ["brand","part_no","price","currency","delivery_time","source_email","supplier"] if c in df_raw.columns]
+        friendly_names = {"brand": "Brand / Make", "part_no": "Part Number", "price": "Unit Price", "currency": "Currency", "delivery_time": "Lead Time", "source_email": "Source Email", "supplier": "Supplier Name"}
 
         # ★ FULLSCREEN INTERCEPTOR (DATA UPLOAD PREVIEW) ★
         if st.session_state.fs_up:
-            st.markdown("<style>header, .top-navbar {display:none!important;} .block-container{padding-top:1.5rem!important; max-width:98%!important;}</style>", unsafe_allow_html=True)
-            c1, c2 = st.columns([9, 1])
+            st.markdown("""
+            <style>
+            header, .top-navbar, [data-testid="stHeader"], footer {display:none!important;}
+            .main .block-container {
+                padding: 1rem !important;
+                max-width: 100% !important;
+                width: 100vw !important;
+                margin: 0 !important;
+            }
+            [data-testid="stDataFrame"] { width: 100% !important; }
+            </style>
+            """, unsafe_allow_html=True)
+            
+            c1, c2 = st.columns([10, 1])
             c1.markdown("<h3 style='margin:0; padding-bottom:12px; color:#1E40AF; font-family:Sora;'>⛶ Full Screen Data Preview</h3>", unsafe_allow_html=True)
             if c2.button("✕ Close Fullscreen", use_container_width=True):
                 st.session_state.fs_up = False
                 st.rerun()
-            st.dataframe(df_raw[preview_cols].rename(columns=friendly_names), use_container_width=True, hide_index=True, height=800)
+            st.dataframe(df_raw[preview_cols].rename(columns=friendly_names), use_container_width=True, hide_index=True, height=850)
             st.stop()
 
-
-        # ── Preview ──
+        # --- Normal UI Flow ---
+        st.markdown("""
+        <div class="page-header">
+          <div class="ph-icon">📤</div>
+          <div><div class="ph-title">Master Data Upload</div>
+               <div class="ph-sub">Upload price sheets (Excel or CSV) to update the parts database</div></div>
+        </div>""", unsafe_allow_html=True)
+        
+        import streamlit.components.v1 as components
+        components.html(guide_html, height=350)
+        
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         file_type_label = "CSV" if file.name.lower().endswith(".csv") else "Excel"
         
@@ -1317,27 +1266,18 @@ elif page == "Data Upload":
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # ── Upload button ──
         if st.button(f"⬆ Upload {len(df_raw):,} Rows to Database"):
-            values = list(
-                df_raw[["part_no","brand","price","supplier","currency","delivery_time","source_email"]]
-                .itertuples(index=False, name=None)
-            )
-            total   = len(values)
-            chunk   = 50  
-            chunks  = [values[i:i+chunk] for i in range(0, total, chunk)]
+            values = list(df_raw[["part_no","brand","price","supplier","currency","delivery_time","source_email"]].itertuples(index=False, name=None))
+            total, chunk = len(values), 50  
+            chunks = [values[i:i+chunk] for i in range(0, total, chunk)]
             n_chunks = len(chunks)
 
-            st.markdown("""
-            <div style="font-size:.82rem;font-weight:600;color:#1E40AF;margin-bottom:6px;">
-              📤 Uploading to database…
-            </div>""", unsafe_allow_html=True)
+            st.markdown("""<div style="font-size:.82rem;font-weight:600;color:#1E40AF;margin-bottom:6px;">📤 Uploading to database…</div>""", unsafe_allow_html=True)
             progress_bar = st.progress(0)
             status_text  = st.empty()
 
             c = get_conn(); cur = c.cursor()
-            uploaded = 0
-            failed   = False
+            uploaded, failed = 0, False
             try:
                 for idx, chunk_vals in enumerate(chunks):
                     execute_values(cur, """
@@ -1354,12 +1294,7 @@ elif page == "Data Upload":
                     uploaded += len(chunk_vals)
                     pct = int((idx + 1) / n_chunks * 100)
                     progress_bar.progress(pct)
-                    status_text.markdown(
-                        f"<div style='font-size:.78rem;color:#64748B;'>"
-                        f"Processed <strong>{uploaded:,}</strong> of <strong>{total:,}</strong> rows "
-                        f"({pct}%)</div>",
-                        unsafe_allow_html=True
-                    )
+                    status_text.markdown(f"<div style='font-size:.78rem;color:#64748B;'>Processed <strong>{uploaded:,}</strong> of <strong>{total:,}</strong> rows ({pct}%)</div>", unsafe_allow_html=True)
                     time.sleep(0.02)
                     
                 c.commit()
@@ -1377,6 +1312,17 @@ elif page == "Data Upload":
                 release(c)
             if not failed:
                 st.rerun()
+
+    else:
+        # Show Guide when no file is uploaded
+        st.markdown("""
+        <div class="page-header">
+          <div class="ph-icon">📤</div>
+          <div><div class="ph-title">Master Data Upload</div>
+               <div class="ph-sub">Upload price sheets (Excel or CSV) to update the parts database</div></div>
+        </div>""", unsafe_allow_html=True)
+        import streamlit.components.v1 as components
+        components.html(guide_html, height=350)
 
 
 # ═══════════════════════════════════════════
