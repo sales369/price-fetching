@@ -598,15 +598,8 @@ def check_login(u, p):
 
 
 # ─────────────────────────────────────────────
-#  ★ NEW: CSV / EXCEL COLUMN NORMALISER
-#    Maps any of our known header variants →
-#    internal names: brand, part_no, price,
-#    supplier, currency, delivery_time
+#  ★ COLUMN & BRAND NORMALISATION
 # ─────────────────────────────────────────────
-# Extended alias list that covers:
-#   - original app headers  (Make / Brand, JPY Price …)
-#   - your processed CSV    (Brand / Make, Unit Price,
-#                            Supplier Name, Lead Time)
 COLUMN_ALIASES = {
     "brand": [
         "make", "brand", "manufacturer",
@@ -632,6 +625,13 @@ COLUMN_ALIASES = {
     ],
 }
 
+# Add any new brands and their misspellings here
+BRAND_ALIASES = {
+    "SCHNEIDER": ["schiner", "schneder", "schneider electric"],
+    "SIEMENS":   ["sieman", "seimens"],
+    "ABB":       ["ab b", "a b b"],
+}
+
 def normalise_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Rename df columns to internal names using COLUMN_ALIASES."""
     col_map = {clean_col(c): c for c in df.columns}
@@ -642,6 +642,25 @@ def normalise_columns(df: pd.DataFrame) -> pd.DataFrame:
                 rename[col_map[alias]] = target
                 break
     df.rename(columns=rename, inplace=True)
+    return df
+
+def normalise_brands(df: pd.DataFrame) -> pd.DataFrame:
+    """Force brands to uppercase and fix known typos."""
+    if "brand" not in df.columns:
+        return df
+    
+    # 1. Force everything to UPPERCASE and remove extra spaces
+    df["brand"] = df["brand"].astype(str).str.strip().str.upper()
+    
+    # 2. Build mapping dictionary for exact matches
+    replace_dict = {}
+    for true_brand, typos in BRAND_ALIASES.items():
+        true_brand_upper = true_brand.upper()
+        for typo in typos:
+            replace_dict[typo.strip().upper()] = true_brand_upper
+            
+    # 3. Apply corrections
+    df["brand"] = df["brand"].replace(replace_dict)
     return df
 
 
@@ -986,7 +1005,7 @@ elif page == "Saved Quotations":
 
 
 # ═══════════════════════════════════════════
-#  PAGE: DATA UPLOAD  ★ UPDATED
+#  PAGE: DATA UPLOAD
 # ═══════════════════════════════════════════
 elif page == "Data Upload":
 
@@ -1114,6 +1133,9 @@ elif page == "Data Upload":
             )
             st.stop()
 
+        # ★ Apply Brand Normalisation Fix ★
+        df_raw = normalise_brands(df_raw)
+
         # Clean string columns
         for col in ["brand", "part_no", "supplier"]:
             df_raw[col] = (df_raw[col].astype(str)
@@ -1139,7 +1161,7 @@ elif page == "Data Upload":
             (df_raw["supplier"]!= "") & (df_raw["supplier"]!= "nan")
         ]
 
-        # ★ FIX: Prevent ON CONFLICT DO UPDATE duplicate row error
+        # ★ Prevent ON CONFLICT DO UPDATE duplicate row error
         df_raw = df_raw.drop_duplicates(subset=["part_no", "brand", "supplier"], keep="last")
 
         # ── Preview ──
