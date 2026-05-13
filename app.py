@@ -526,6 +526,7 @@ def init_schema():
             ALTER TABLE parts_table ADD COLUMN IF NOT EXISTS supplier TEXT;
             ALTER TABLE parts_table ADD COLUMN IF NOT EXISTS currency TEXT;
             ALTER TABLE parts_table ADD COLUMN IF NOT EXISTS delivery_time TEXT;
+            ALTER TABLE parts_table ADD COLUMN IF NOT EXISTS source_email TEXT;
             DO $$
             BEGIN
               IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='unique_part_supplier') THEN
@@ -570,27 +571,28 @@ def lookup_prices(items):
             part=r["part_no"].strip(); brand=r["brand"].strip(); qty=max(int(r.get("qty") or 1),1)
             if not brand: continue
             
-            # UPDATED: Logical switch for Brand-only vs Part+Brand
+            # Logical switch for Brand-only vs Part+Brand
             if part:
                 cur.execute("""
-                    SELECT part_no, supplier, price, currency, delivery_time FROM parts_table
+                    SELECT part_no, supplier, price, currency, delivery_time, source_email FROM parts_table
                     WHERE TRIM(LOWER(part_no))=TRIM(LOWER(%s)) AND TRIM(LOWER(brand))=TRIM(LOWER(%s))
                     ORDER BY price ASC
                 """, (part,brand))
             else:
                 cur.execute("""
-                    SELECT part_no, supplier, price, currency, delivery_time FROM parts_table
+                    SELECT part_no, supplier, price, currency, delivery_time, source_email FROM parts_table
                     WHERE TRIM(LOWER(brand))=TRIM(LOWER(%s))
                     ORDER BY part_no ASC, price ASC
                 """, (brand,))
                 
             rows=cur.fetchall()
             if rows:
-                for db_part, supplier,price,currency,delivery_time in rows:
+                for db_part, supplier, price, currency, delivery_time, source_email in rows:
                     results.append({
                         "Brand": brand,
-                        "Part No": db_part, # Use actual part number from DB
+                        "Part No": db_part,
                         "Supplier": supplier,
+                        "Source Email": source_email or "",
                         "Currency": currency or "",
                         "Delivery Time": delivery_time or "",
                         "Qty": qty,
@@ -598,11 +600,11 @@ def lookup_prices(items):
                         "Amount": qty * float(price)
                     })
             else:
-                # Handle Not Found Case
                 results.append({
                     "Brand": brand,
                     "Part No": part if part else "N/A",
                     "Supplier": "Not Found",
+                    "Source Email": "",
                     "Currency": "",
                     "Delivery Time": "",
                     "Qty": qty,
@@ -648,9 +650,12 @@ COLUMN_ALIASES = {
         "deliverytime", "delivery", "leadtime",
         "deliverydays", "lead", "leadtimedelivery",
     ],
+    "source_email": [
+        "sourceemail", "email", "contactemail", 
+        "contact", "supplieremail"
+    ]
 }
 
-# Add any new brands and their misspellings here
 BRAND_ALIASES = {
     "SCHNEIDER": ["schiner", "schneder", "schneider electric"],
     "SIEMENS":   ["sieman", "seimens"],
@@ -674,17 +679,14 @@ def normalise_brands(df: pd.DataFrame) -> pd.DataFrame:
     if "brand" not in df.columns:
         return df
     
-    # 1. Force everything to UPPERCASE and remove extra spaces
     df["brand"] = df["brand"].astype(str).str.strip().str.upper()
     
-    # 2. Build mapping dictionary for exact matches
     replace_dict = {}
     for true_brand, typos in BRAND_ALIASES.items():
         true_brand_upper = true_brand.upper()
         for typo in typos:
             replace_dict[typo.strip().upper()] = true_brand_upper
             
-    # 3. Apply corrections
     df["brand"] = df["brand"].replace(replace_dict)
     return df
 
@@ -917,11 +919,18 @@ if page == "Price Lookup":
         </div>""", unsafe_allow_html=True)
 
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown('<div class="section-label">All Supplier Prices</div>', unsafe_allow_html=True)
+        
+        # ★ MAXIMIZE TABLE TOGGLE (PRICE LOOKUP) ★
+        c_hdr1, c_hdr2 = st.columns([6, 1])
+        with c_hdr1:
+            st.markdown('<div class="section-label">All Supplier Prices</div>', unsafe_allow_html=True)
+        with c_hdr2:
+            max_pl = st.toggle("⛶ Expand Table", key="max_pl")
+            
+        tbl_height = 800 if max_pl else 360
 
         def highlight_rows(row):
             if row["Supplier"]=="Not Found": return ["background-color:#FEF2F2;color:#991B1B"]*len(row)
-            # Find cheapest price for this specific part number
             mask=(df["Part No"]==row["Part No"])&(df["Brand"]==row["Brand"])
             valid=df.loc[mask&(df["Supplier"]!="Not Found"),"Unit Price"]
             if not valid.empty and row["Unit Price"]==valid.min():
@@ -930,7 +939,7 @@ if page == "Price Lookup":
 
         styled=(df.style.apply(highlight_rows,axis=1)
                   .format({"Unit Price":"{:,.0f}","Amount":"{:,.0f}"}))
-        st.dataframe(styled, use_container_width=True, hide_index=True, height=360)
+        st.dataframe(styled, use_container_width=True, hide_index=True, height=tbl_height)
         st.markdown("""
         <div style="display:flex;gap:16px;margin-top:10px;font-size:.74rem;color:#64748B;">
           <span><span class="badge badge-green">Green</span> Cheapest version of that specific part</span>
@@ -951,10 +960,12 @@ if page == "Price Lookup":
                 finally:
                     release(c)
         with a2:
-            buf=BytesIO(); df.to_excel(buf,index=False); buf.seek(0)
-            st.download_button("📥 Export Excel", buf, file_name="price_lookup.xlsx",
-                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                               use_container_width=True)
+            # ★ ADMIN EXPORT RESTRICTION ★
+            if is_admin:
+                buf=BytesIO(); df.to_excel(buf,index=False); buf.seek(0)
+                st.download_button("📥 Export Excel", buf, file_name="price_lookup.xlsx",
+                                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                   use_container_width=True)
 
 
 # ═══════════════════════════════════════════
@@ -1003,39 +1014,56 @@ elif page == "Saved Quotations":
     display_df.insert(0,"Select",False)
 
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-label">All Records</div>', unsafe_allow_html=True)
-    edited_df=st.data_editor(display_df, use_container_width=True, hide_index=True, height=400, key="saved_editor")
+    
+    # ★ MAXIMIZE TABLE TOGGLE (SAVED QUOTATIONS) ★
+    c_hdr1, c_hdr2 = st.columns([6, 1])
+    with c_hdr1:
+        st.markdown('<div class="section-label">All Records</div>', unsafe_allow_html=True)
+    with c_hdr2:
+        max_sq = st.toggle("⛶ Expand Table", key="max_sq")
+        
+    tbl_height2 = 800 if max_sq else 400
+    edited_df=st.data_editor(display_df, use_container_width=True, hide_index=True, height=tbl_height2, key="saved_editor")
     st.markdown('</div>', unsafe_allow_html=True)
 
     b1,b2,_ = st.columns([1.3,1.3,5])
     with b1:
-        buf=BytesIO(); final_df.drop(columns=["_offer_id"],errors="ignore").to_excel(buf,index=False); buf.seek(0)
-        st.download_button("📥 Download All", buf, file_name="all_quotations.xlsx",
-                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                           use_container_width=True)
+        # ★ ADMIN EXPORT RESTRICTION ★
+        if is_admin:
+            buf=BytesIO(); final_df.drop(columns=["_offer_id"],errors="ignore").to_excel(buf,index=False); buf.seek(0)
+            st.download_button("📥 Download All", buf, file_name="all_quotations.xlsx",
+                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                               use_container_width=True)
     with b2:
-        if st.button("🗑 Delete Selected", use_container_width=True):
-            sel_mask=edited_df["Select"]==True
-            if sel_mask.any():
-                ids_to_del=list(final_df.loc[sel_mask[sel_mask].index,"_offer_id"].unique())
-                if ids_to_del:
-                    conn2=get_conn(); cur2=conn2.cursor()
-                    try:
-                        cur2.execute("DELETE FROM saved_offers WHERE id=ANY(%s)",(ids_to_del,))
-                        conn2.commit(); st.success(f"Deleted {len(ids_to_del)} quotation(s).")
-                    except Exception as e:
-                        conn2.rollback(); st.error(f"Delete failed: {e}")
-                    finally:
-                        release(conn2)
-                    st.rerun()
-            else:
-                st.warning("Select at least one row to delete.")
+        # ★ ADMIN DELETE RESTRICTION ★
+        if is_admin:
+            if st.button("🗑 Delete Selected", use_container_width=True):
+                sel_mask=edited_df["Select"]==True
+                if sel_mask.any():
+                    ids_to_del=list(final_df.loc[sel_mask[sel_mask].index,"_offer_id"].unique())
+                    if ids_to_del:
+                        conn2=get_conn(); cur2=conn2.cursor()
+                        try:
+                            cur2.execute("DELETE FROM saved_offers WHERE id=ANY(%s)",(ids_to_del,))
+                            conn2.commit(); st.success(f"Deleted {len(ids_to_del)} quotation(s).")
+                        except Exception as e:
+                            conn2.rollback(); st.error(f"Delete failed: {e}")
+                        finally:
+                            release(conn2)
+                        st.rerun()
+                else:
+                    st.warning("Select at least one row to delete.")
 
 
 # ═══════════════════════════════════════════
 #  PAGE: DATA UPLOAD
 # ═══════════════════════════════════════════
 elif page == "Data Upload":
+
+    # ★ ADMIN PAGE SECURITY CHECK ★
+    if not is_admin:
+        st.error("⛔ Access Denied. Administrator privileges required to view this page.")
+        st.stop()
 
     st.markdown("""
     <div class="page-header">
@@ -1124,6 +1152,11 @@ elif page == "Data Upload":
           <td><span class="badge opt">Optional</span></td>
           <td class="col-desc">Delivery / lead time details</td>
         </tr>
+        <tr>
+          <td><span class="col-name">Source Email</span></td>
+          <td><span class="badge opt">Optional</span></td>
+          <td class="col-desc">Supplier contact email</td>
+        </tr>
       </table>
       <div class="info-box">
         ✅ &nbsp;Column names are <strong>case-insensitive</strong> — spacing variations are handled automatically.<br>
@@ -1131,7 +1164,7 @@ elif page == "Data Upload":
         ✅ &nbsp;Both <strong>.xlsx</strong> and <strong>.csv</strong> files are accepted.
       </div>
     </div>
-    """, height=320)
+    """, height=350)
 
     # ── File uploader ──
     file = st.file_uploader(
@@ -1140,7 +1173,6 @@ elif page == "Data Upload":
     )
 
     if file:
-        # Load file based on extension
         try:
             df_raw = load_upload_file(file)
         except Exception as e:
@@ -1150,7 +1182,7 @@ elif page == "Data Upload":
         # Normalise column names
         df_raw = normalise_columns(df_raw)
 
-        # Check required columns are present
+        # Check required columns
         required = ["brand", "part_no", "price", "supplier"]
         missing = [c for c in required if c not in df_raw.columns]
         if missing:
@@ -1170,7 +1202,7 @@ elif page == "Data Upload":
                            .str.replace(r'[\n"\r]', '', regex=True)
                            .str.strip())
 
-        for col in ["currency", "delivery_time"]:
+        for col in ["currency", "delivery_time", "source_email"]:
             if col not in df_raw.columns:
                 df_raw[col] = ""
             else:
@@ -1189,40 +1221,49 @@ elif page == "Data Upload":
             (df_raw["supplier"]!= "") & (df_raw["supplier"]!= "nan")
         ]
 
-        # FIX: Prevent ON CONFLICT DO UPDATE duplicate row error
+        # Prevent ON CONFLICT DO UPDATE duplicate row error
         df_raw = df_raw.drop_duplicates(subset=["part_no", "brand", "supplier"], keep="last")
 
         # ── Preview ──
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
 
         file_type_label = "CSV" if file.name.lower().endswith(".csv") else "Excel"
-        st.markdown(
-            f'<div class="section-label">Preview — {len(df_raw):,} valid rows '
-            f'<span class="badge badge-{"green" if file_type_label=="CSV" else "blue"}" '
-            f'style="margin-left:8px;">{file_type_label}</span></div>',
-            unsafe_allow_html=True
-        )
+        
+        # ★ MAXIMIZE TABLE TOGGLE (DATA UPLOAD PREVIEW) ★
+        c_hdr1, c_hdr2 = st.columns([6, 1])
+        with c_hdr1:
+            st.markdown(
+                f'<div class="section-label">Preview — {len(df_raw):,} valid rows '
+                f'<span class="badge badge-{"green" if file_type_label=="CSV" else "blue"}" '
+                f'style="margin-left:8px;">{file_type_label}</span></div>',
+                unsafe_allow_html=True
+            )
+        with c_hdr2:
+            max_up = st.toggle("⛶ Expand Table", key="max_up")
+            
+        tbl_height3 = 800 if max_up else 280
 
-        preview_cols = [c for c in ["brand","part_no","price","currency","delivery_time","supplier"]
+        preview_cols = [c for c in ["brand","part_no","price","currency","delivery_time","source_email","supplier"]
                         if c in df_raw.columns]
         friendly_names = {
             "brand": "Brand / Make", "part_no": "Part Number", "price": "Unit Price",
-            "currency": "Currency", "delivery_time": "Lead Time", "supplier": "Supplier Name"
+            "currency": "Currency", "delivery_time": "Lead Time", 
+            "source_email": "Source Email", "supplier": "Supplier Name"
         }
         st.dataframe(
-            df_raw[preview_cols].rename(columns=friendly_names).head(30),
-            use_container_width=True, hide_index=True, height=280
+            df_raw[preview_cols].rename(columns=friendly_names).head(200 if max_up else 30),
+            use_container_width=True, hide_index=True, height=tbl_height3
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
         # ── Upload button ──
         if st.button(f"⬆ Upload {len(df_raw):,} Rows to Database"):
             values = list(
-                df_raw[["part_no","brand","price","supplier","currency","delivery_time"]]
+                df_raw[["part_no","brand","price","supplier","currency","delivery_time","source_email"]]
                 .itertuples(index=False, name=None)
             )
             total   = len(values)
-            chunk   = 50  # Reduced for smoother updates
+            chunk   = 50  
             chunks  = [values[i:i+chunk] for i in range(0, total, chunk)]
             n_chunks = len(chunks)
 
@@ -1239,13 +1280,14 @@ elif page == "Data Upload":
             try:
                 for idx, chunk_vals in enumerate(chunks):
                     execute_values(cur, """
-                        INSERT INTO parts_table(part_no,brand,price,supplier,currency,delivery_time)
+                        INSERT INTO parts_table(part_no,brand,price,supplier,currency,delivery_time,source_email)
                         VALUES %s
                         ON CONFLICT(part_no,brand,supplier)
                         DO UPDATE SET
                             price         = EXCLUDED.price,
                             currency      = EXCLUDED.currency,
-                            delivery_time = EXCLUDED.delivery_time
+                            delivery_time = EXCLUDED.delivery_time,
+                            source_email  = EXCLUDED.source_email
                     """, chunk_vals, page_size=chunk)
                     
                     uploaded += len(chunk_vals)
@@ -1280,6 +1322,11 @@ elif page == "Data Upload":
 #  PAGE: ACCESS CONTROL
 # ═══════════════════════════════════════════
 elif page == "Access Control":
+
+    # ★ ADMIN PAGE SECURITY CHECK ★
+    if not is_admin:
+        st.error("⛔ Access Denied. Administrator privileges required to view this page.")
+        st.stop()
 
     st.markdown("""
     <div class="page-header">
