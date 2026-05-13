@@ -1138,6 +1138,9 @@ elif page == "Data Upload":
             (df_raw["supplier"]!= "") & (df_raw["supplier"]!= "nan")
         ]
 
+        # 🌟 Keep the last occurrence of any duplicate row
+        df_raw = df_raw.drop_duplicates(subset=["part_no", "brand", "supplier"], keep="last")
+
         # ── Preview ──
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
 
