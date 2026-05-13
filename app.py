@@ -997,15 +997,50 @@ elif page == "Data Upload":
     </div>""", unsafe_allow_html=True)
 
     # ── Accepted column guide ──
-    st.markdown("""
-    <div class="section-card">
-      <div class="section-label">Accepted Column Names (any format below works)</div>
-
-      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:4px;">
-
-        <div>
-          <div style="font-size:.68rem;font-weight:700;color:#7C3AED;letter-spacing:.10em;
-                      text-transform:uppercase;margin-bottom:8px;">📊 Excel Format</div>
+    import streamlit.components.v1 as components
+    components.html("""
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+      .guide-card {
+        background: rgba(255,255,255,0.85);
+        border: 1px solid rgba(255,255,255,0.96);
+        border-radius: 20px;
+        padding: 20px 24px 22px;
+        box-shadow: 0 4px 24px rgba(30,64,175,0.08);
+      }
+      .guide-label {
+        font-size: 10px; font-weight: 700; letter-spacing: .15em;
+        text-transform: uppercase; color: #94A3B8;
+        margin-bottom: 14px; padding-bottom: 10px;
+        border-bottom: 1px solid #F1F5F9;
+      }
+      .cols-row { display: flex; gap: 28px; flex-wrap: wrap; margin-bottom: 6px; }
+      .col-group { flex: 1; min-width: 200px; }
+      .col-type {
+        font-size: 10px; font-weight: 700; letter-spacing: .10em;
+        text-transform: uppercase; margin-bottom: 10px;
+      }
+      .col-type.excel { color: #7C3AED; }
+      .col-type.csv   { color: #059669; }
+      .divider { border-left: 1px solid #E2E8F0; margin: 0 4px; }
+      .badge {
+        display: inline-block; padding: 4px 11px; border-radius: 20px;
+        font-size: 11px; font-weight: 700; margin: 2px 2px 3px 0;
+      }
+      .badge-blue  { background:#EFF6FF; color:#1E40AF; border:1px solid #BFDBFE; }
+      .badge-green { background:#ECFDF5; color:#059669; border:1px solid #A7F3D0; }
+      .info-box {
+        font-size: 12px; color: #64748B; margin-top: 14px; line-height: 1.75;
+        padding: 10px 14px; background: rgba(241,245,249,0.8); border-radius: 10px;
+      }
+      .info-box strong { color: #374151; }
+    </style>
+    <div class="guide-card">
+      <div class="guide-label">Accepted Column Names (any format below works)</div>
+      <div class="cols-row">
+        <div class="col-group">
+          <div class="col-type excel">📊 Excel Format</div>
           <span class="badge badge-blue">Make / Brand</span>
           <span class="badge badge-blue">Part Number</span>
           <span class="badge badge-blue">JPY Price</span>
@@ -1013,12 +1048,9 @@ elif page == "Data Upload":
           <span class="badge badge-blue">Currency</span>
           <span class="badge badge-blue">Delivery Time</span>
         </div>
-
-        <div style="border-left:1px solid #E2E8F0;margin:0 4px"></div>
-
-        <div>
-          <div style="font-size:.68rem;font-weight:700;color:#059669;letter-spacing:.10em;
-                      text-transform:uppercase;margin-bottom:8px;">📄 CSV Format (processed data)</div>
+        <div class="divider"></div>
+        <div class="col-group">
+          <div class="col-type csv">📄 CSV Format (processed data)</div>
           <span class="badge badge-green">Brand / Make</span>
           <span class="badge badge-green">Part Number</span>
           <span class="badge badge-green">Unit Price</span>
@@ -1026,16 +1058,14 @@ elif page == "Data Upload":
           <span class="badge badge-green">Currency</span>
           <span class="badge badge-green">Lead Time</span>
         </div>
-
       </div>
-
-      <div style="font-size:.78rem;color:#64748B;margin-top:14px;line-height:1.7;
-                  padding:10px 14px;background:rgba(241,245,249,.7);border-radius:10px;">
+      <div class="info-box">
         ✅ &nbsp;Column names are <strong>case-insensitive</strong> — any spacing or slash variation is handled automatically.<br>
         ✅ &nbsp;Same part + supplier uploaded again will <strong>update</strong> price, not create a duplicate.<br>
         ✅ &nbsp;Both <strong>.xlsx</strong> and <strong>.csv</strong> files are accepted.
       </div>
-    </div>""", unsafe_allow_html=True)
+    </div>
+    """, height=260)
 
     # ── File uploader — now accepts csv too ──
     file = st.file_uploader(
