@@ -1167,25 +1167,57 @@ elif page == "Data Upload":
                 df_raw[["part_no","brand","price","supplier","currency","delivery_time"]]
                 .itertuples(index=False, name=None)
             )
+            total   = len(values)
+            chunk   = 100  # rows per progress step
+            chunks  = [values[i:i+chunk] for i in range(0, total, chunk)]
+            n_chunks = len(chunks)
+
+            # Progress UI
+            st.markdown("""
+            <div style="font-size:.82rem;font-weight:600;color:#1E40AF;margin-bottom:6px;">
+              📤 Uploading to database…
+            </div>""", unsafe_allow_html=True)
+            progress_bar = st.progress(0)
+            status_text  = st.empty()
+
             c = get_conn(); cur = c.cursor()
+            uploaded = 0
+            failed   = False
             try:
-                execute_values(cur, """
-                    INSERT INTO parts_table(part_no,brand,price,supplier,currency,delivery_time)
-                    VALUES %s
-                    ON CONFLICT(part_no,brand,supplier)
-                    DO UPDATE SET
-                        price         = EXCLUDED.price,
-                        currency      = EXCLUDED.currency,
-                        delivery_time = EXCLUDED.delivery_time
-                """, values, page_size=500)
+                for idx, chunk_vals in enumerate(chunks):
+                    execute_values(cur, """
+                        INSERT INTO parts_table(part_no,brand,price,supplier,currency,delivery_time)
+                        VALUES %s
+                        ON CONFLICT(part_no,brand,supplier)
+                        DO UPDATE SET
+                            price         = EXCLUDED.price,
+                            currency      = EXCLUDED.currency,
+                            delivery_time = EXCLUDED.delivery_time
+                    """, chunk_vals, page_size=chunk)
+                    uploaded += len(chunk_vals)
+                    pct = int((idx + 1) / n_chunks * 100)
+                    progress_bar.progress(pct)
+                    status_text.markdown(
+                        f"<div style='font-size:.78rem;color:#64748B;'>"
+                        f"Processed <strong>{uploaded:,}</strong> of <strong>{total:,}</strong> rows "
+                        f"({pct}%)</div>",
+                        unsafe_allow_html=True
+                    )
                 c.commit()
                 fetch_brands.clear()
-                st.success(f"✅ Successfully uploaded {len(values):,} rows to the database.")
+                progress_bar.progress(100)
+                status_text.empty()
+                st.success(f"✅ Successfully uploaded {uploaded:,} rows to the database.")
             except Exception as e:
-                c.rollback(); st.error(f"Upload failed: {e}")
+                c.rollback()
+                progress_bar.empty()
+                status_text.empty()
+                st.error(f"Upload failed: {e}")
+                failed = True
             finally:
                 release(c)
-            st.rerun()
+            if not failed:
+                st.rerun()
 
 
 # ═══════════════════════════════════════════
