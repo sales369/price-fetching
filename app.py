@@ -1015,57 +1015,75 @@ elif page == "Data Upload":
         margin-bottom: 14px; padding-bottom: 10px;
         border-bottom: 1px solid #F1F5F9;
       }
-      .cols-row { display: flex; gap: 28px; flex-wrap: wrap; margin-bottom: 6px; }
-      .col-group { flex: 1; min-width: 200px; }
-      .col-type {
-        font-size: 10px; font-weight: 700; letter-spacing: .10em;
-        text-transform: uppercase; margin-bottom: 10px;
-      }
-      .col-type.excel { color: #7C3AED; }
-      .col-type.csv   { color: #059669; }
-      .divider { border-left: 1px solid #E2E8F0; margin: 0 4px; }
+      .cols-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
       .badge {
-        display: inline-block; padding: 4px 11px; border-radius: 20px;
-        font-size: 11px; font-weight: 700; margin: 2px 2px 3px 0;
+        display: inline-block; padding: 5px 14px; border-radius: 20px;
+        font-size: 12px; font-weight: 700; margin: 3px 3px 4px 0;
       }
       .badge-blue  { background:#EFF6FF; color:#1E40AF; border:1px solid #BFDBFE; }
-      .badge-green { background:#ECFDF5; color:#059669; border:1px solid #A7F3D0; }
+      .req  { background:#FFF7ED; color:#C2410C; border:1px solid #FED7AA; }
+      .opt  { background:#F0FDF4; color:#15803D; border:1px solid #BBF7D0; }
+      .col-table { width:100%; border-collapse:collapse; margin-top:4px; }
+      .col-table th {
+        text-align:left; font-size:10px; font-weight:700; letter-spacing:.10em;
+        text-transform:uppercase; color:#94A3B8; padding:0 8px 8px 0;
+      }
+      .col-table td { padding: 5px 8px 5px 0; font-size:12px; vertical-align:middle; }
+      .col-table tr:not(:last-child) td { border-bottom: 1px solid #F1F5F9; }
+      .col-name { font-weight:700; color:#0F172A; font-family:monospace; font-size:13px; }
+      .col-desc { color:#64748B; }
       .info-box {
-        font-size: 12px; color: #64748B; margin-top: 14px; line-height: 1.75;
+        font-size: 12px; color: #64748B; margin-top: 16px; line-height: 1.75;
         padding: 10px 14px; background: rgba(241,245,249,0.8); border-radius: 10px;
       }
       .info-box strong { color: #374151; }
     </style>
     <div class="guide-card">
-      <div class="guide-label">Accepted Column Names (any format below works)</div>
-      <div class="cols-row">
-        <div class="col-group">
-          <div class="col-type excel">📊 Excel Format</div>
-          <span class="badge badge-blue">Make / Brand</span>
-          <span class="badge badge-blue">Part Number</span>
-          <span class="badge badge-blue">JPY Price</span>
-          <span class="badge badge-blue">Supplier</span>
-          <span class="badge badge-blue">Currency</span>
-          <span class="badge badge-blue">Delivery Time</span>
-        </div>
-        <div class="divider"></div>
-        <div class="col-group">
-          <div class="col-type csv">📄 CSV Format (processed data)</div>
-          <span class="badge badge-green">Brand / Make</span>
-          <span class="badge badge-green">Part Number</span>
-          <span class="badge badge-green">Unit Price</span>
-          <span class="badge badge-green">Supplier Name</span>
-          <span class="badge badge-green">Currency</span>
-          <span class="badge badge-green">Lead Time</span>
-        </div>
-      </div>
+      <div class="guide-label">Required Excel Column Headers</div>
+      <table class="col-table">
+        <tr>
+          <th>Column Header (exact)</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+        <tr>
+          <td><span class="col-name">Supplier Name</span></td>
+          <td><span class="badge req">Required</span></td>
+          <td class="col-desc">Name of the vendor / supplier</td>
+        </tr>
+        <tr>
+          <td><span class="col-name">Brand / Make</span></td>
+          <td><span class="badge req">Required</span></td>
+          <td class="col-desc">Brand or manufacturer of the part</td>
+        </tr>
+        <tr>
+          <td><span class="col-name">Part Number</span></td>
+          <td><span class="badge req">Required</span></td>
+          <td class="col-desc">Unique part / item code</td>
+        </tr>
+        <tr>
+          <td><span class="col-name">Unit Price</span></td>
+          <td><span class="badge req">Required</span></td>
+          <td class="col-desc">Price per unit (numeric)</td>
+        </tr>
+        <tr>
+          <td><span class="col-name">Currency</span></td>
+          <td><span class="badge opt">Optional</span></td>
+          <td class="col-desc">e.g. INR, USD, EUR</td>
+        </tr>
+        <tr>
+          <td><span class="col-name">Lead Time</span></td>
+          <td><span class="badge opt">Optional</span></td>
+          <td class="col-desc">Delivery / lead time details</td>
+        </tr>
+      </table>
       <div class="info-box">
-        ✅ &nbsp;Column names are <strong>case-insensitive</strong> — any spacing or slash variation is handled automatically.<br>
-        ✅ &nbsp;Same part + supplier uploaded again will <strong>update</strong> price, not create a duplicate.<br>
+        ✅ &nbsp;Column names are <strong>case-insensitive</strong> — spacing variations are handled automatically.<br>
+        ✅ &nbsp;Same part + supplier uploaded again will <strong>update</strong> the price, not create a duplicate.<br>
         ✅ &nbsp;Both <strong>.xlsx</strong> and <strong>.csv</strong> files are accepted.
       </div>
     </div>
-    """, height=260)
+    """, height=320)
 
     # ── File uploader — now accepts csv too ──
     file = st.file_uploader(
