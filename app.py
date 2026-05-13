@@ -7,6 +7,7 @@ import json
 from io import BytesIO
 import os
 import re
+import time  # <-- Added for real-time progress bar UI updates
 
 # ─────────────────────────────────────────────
 #  PAGE CONFIG
@@ -985,7 +986,7 @@ elif page == "Saved Quotations":
 
 
 # ═══════════════════════════════════════════
-#  PAGE: DATA UPLOAD  ★ UPDATED
+#  PAGE: DATA UPLOAD
 # ═══════════════════════════════════════════
 elif page == "Data Upload":
 
@@ -1085,7 +1086,7 @@ elif page == "Data Upload":
     </div>
     """, height=320)
 
-    # ── File uploader — now accepts csv too ──
+    # ── File uploader ──
     file = st.file_uploader(
         "Upload Excel (.xlsx) or CSV (.csv) file",
         type=["xlsx", "csv"]
@@ -1171,7 +1172,7 @@ elif page == "Data Upload":
                 .itertuples(index=False, name=None)
             )
             total   = len(values)
-            chunk   = 100  # rows per progress step
+            chunk   = 50  # <-- Reduced from 100 to force more frequent UI updates
             chunks  = [values[i:i+chunk] for i in range(0, total, chunk)]
             n_chunks = len(chunks)
 
@@ -1197,6 +1198,7 @@ elif page == "Data Upload":
                             currency      = EXCLUDED.currency,
                             delivery_time = EXCLUDED.delivery_time
                     """, chunk_vals, page_size=chunk)
+                    
                     uploaded += len(chunk_vals)
                     pct = int((idx + 1) / n_chunks * 100)
                     progress_bar.progress(pct)
@@ -1206,6 +1208,10 @@ elif page == "Data Upload":
                         f"({pct}%)</div>",
                         unsafe_allow_html=True
                     )
+                    
+                    # <-- Force Streamlit to render this frame to the browser
+                    time.sleep(0.02) 
+                    
                 c.commit()
                 fetch_brands.clear()
                 progress_bar.progress(100)
