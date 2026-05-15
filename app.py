@@ -27,9 +27,9 @@ for k, v in {
     "page": "Price Lookup",
     "table_data": pd.DataFrame(),
     "num_rows": 3,
-    "fs_pl": False,  # Fullscreen Price Lookup toggle
-    "fs_sq": False,  # Fullscreen Saved Quotations toggle
-    "fs_up": False,  # Fullscreen Upload Preview toggle
+    "fs_pl": False,
+    "fs_sq": False,
+    "fs_up": False,
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -41,7 +41,6 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* ━━━ KEYFRAMES ━━━ */
 @keyframes aurora1{0%{transform:translate(0,0) scale(1)}30%{transform:translate(90px,-70px) scale(1.12)}65%{transform:translate(-60px,80px) scale(0.91)}100%{transform:translate(0,0) scale(1)}}
 @keyframes aurora2{0%{transform:translate(0,0) scale(1.06)}35%{transform:translate(-90px,60px) scale(0.88)}70%{transform:translate(70px,-80px) scale(1.14)}100%{transform:translate(0,0) scale(1.06)}}
 @keyframes aurora3{0%{transform:translate(0,0) scale(0.96)}50%{transform:translate(55px,65px) scale(1.10)}100%{transform:translate(0,0) scale(0.96)}}
@@ -58,16 +57,13 @@ st.markdown("""
 @keyframes badgePop{0%{transform:scale(1)}50%{transform:scale(1.12)}100%{transform:scale(1)}}
 @keyframes cardHover{from{transform:translateY(0) scale(1)}to{transform:translateY(-5px) scale(1.015)}}
 
-/* ━━━ RESET ━━━ */
 #MainMenu,footer,header{visibility:hidden}
 *,*::before,*::after{box-sizing:border-box}
 section[data-testid="stSidebar"],[data-testid="collapsedControl"],[data-testid="stSidebarCollapseButton"]{display:none!important}
 
-/* ━━━ ZOOM-OUT VIEWPORT SCALE ━━━ */
 html{font-size:14px}
 body{zoom:0.92}
 
-/* ━━━ APP BASE ━━━ */
 .stApp{
   font-family:'Inter',sans-serif;
   color:#0F172A;
@@ -77,7 +73,6 @@ body{zoom:0.92}
   overflow-x:hidden;
 }
 
-/* ━━━ AURORA LAYER 1 ━━━ */
 .stApp::before{
   content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
   background:
@@ -88,7 +83,6 @@ body{zoom:0.92}
   animation:aurora1 20s ease-in-out infinite;
 }
 
-/* ━━━ AURORA LAYER 2 ━━━ */
 .stApp::after{
   content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
   background:
@@ -98,7 +92,6 @@ body{zoom:0.92}
   animation:aurora2 28s ease-in-out infinite;
 }
 
-/* ━━━ MOVING GRID ━━━ */
 #pd-grid{
   position:fixed;inset:0;z-index:1;pointer-events:none;
   background-image:
@@ -108,7 +101,6 @@ body{zoom:0.92}
   animation:gridFlow 12s ease-in-out infinite;
 }
 
-/* ━━━ DIAGONAL LINES ━━━ */
 #pd-diag{
   position:fixed;inset:0;z-index:1;pointer-events:none;
   background-image:repeating-linear-gradient(
@@ -118,9 +110,6 @@ body{zoom:0.92}
   animation:diagFlow 30s linear infinite;
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   NAVBAR
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .top-navbar{
   display:flex;align-items:center;justify-content:space-between;
   background:rgba(255,255,255,.95);
@@ -163,9 +152,6 @@ body{zoom:0.92}
 }
 .navbar-uname{font-size:.82rem;font-weight:700;color:#1E40AF;font-family:'Sora',sans-serif}
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   NAV PILLS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .nav-pill > div > button,
 .nav-pill-active > div > button,
 .signout-pill > div > button,
@@ -233,9 +219,6 @@ body{zoom:0.92}
 .nav-pill>div,.nav-pill-active>div,
 .signout-pill>div,.refresh-pill>div{padding:0!important;margin:0!important}
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   MAIN CONTENT BUTTONS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .block-container{
   padding:0 2.5rem 3rem!important;max-width:100%!important;
   position:relative;z-index:10;
@@ -283,9 +266,6 @@ body{zoom:0.92}
   box-shadow:0 10px 28px rgba(5,150,105,.42)!important;opacity:1!important;
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   GLASS CARDS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .metric-row{display:flex;gap:16px;margin-bottom:1.8rem;flex-wrap:wrap}
 .metric-card{
   background:rgba(255,255,255,.78);
@@ -339,7 +319,6 @@ body{zoom:0.92}
   border-bottom:1px solid rgba(241,245,249,1);
 }
 
-/* ━━━ PAGE HEADER ━━━ */
 .page-header{
   display:flex;align-items:center;gap:16px;
   margin-bottom:1.8rem;padding-bottom:1.2rem;
@@ -358,7 +337,6 @@ body{zoom:0.92}
 .ph-title{font-size:1.45rem!important;margin:0!important;font-family:'Sora',sans-serif!important;font-weight:800!important;color:#0F172A!important}
 .ph-sub{margin:0;color:#64748B;font-size:.79rem;margin-top:4px}
 
-/* ━━━ INPUTS ━━━ */
 .stTextInput>div>div>input,
 .stNumberInput>div>div>input,
 .stSelectbox>div>div{
@@ -385,7 +363,6 @@ label,.stTextInput label,.stSelectbox label,.stNumberInput label,.stFileUploader
   border-radius:14px!important;overflow:hidden!important;border:1px solid #E2E8F0!important;
 }
 
-/* ━━━ BADGES ━━━ */
 .badge{
   display:inline-block;padding:4px 12px;border-radius:20px;
   font-size:.66rem;font-weight:700;letter-spacing:.05em;margin:2px;
@@ -398,7 +375,6 @@ label,.stTextInput label,.stSelectbox label,.stNumberInput label,.stFileUploader
 .badge-purple{background:#F5F3FF;color:#7C3AED;border:1px solid #DDD6FE}
 .part-col-label{font-size:.62rem;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:#64748B;padding-left:2px}
 
-/* ━━━ FORMAT TABS (upload page) ━━━ */
 .format-tab-row{display:flex;gap:10px;margin-bottom:18px}
 .format-tab{
   flex:1;padding:14px 16px;border-radius:14px;cursor:pointer;
@@ -412,9 +388,6 @@ label,.stTextInput label,.stSelectbox label,.stNumberInput label,.stFileUploader
 .format-tab-title{font-size:.82rem;font-weight:700;color:#0F172A;margin-bottom:3px}
 .format-tab-sub{font-size:.70rem;color:#94A3B8}
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   LOGIN CARD
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .login-card{
   background:#fff;border-radius:28px;overflow:hidden;
   width:100%;max-width:430px;
@@ -494,6 +467,12 @@ label,.stTextInput label,.stSelectbox label,.stNumberInput label,.stFileUploader
 }
 .login-body .stButton>button:hover::before{background-position:200% center}
 .login-body .stButton>button:active{transform:translateY(0)!important}
+
+/* ── Admin Credentials card accent ── */
+.admin-cred-card {
+  border-left: 4px solid #1E40AF !important;
+  background: linear-gradient(135deg, rgba(239,246,255,0.85), rgba(255,255,255,0.78)) !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -573,8 +552,6 @@ def lookup_prices(items):
         for r in items:
             part=r["part_no"].strip(); brand=r["brand"].strip(); qty=max(int(r.get("qty") or 1),1)
             if not brand: continue
-            
-            # Logical switch for Brand-only vs Part+Brand
             if part:
                 cur.execute("""
                     SELECT part_no, supplier, price, currency, delivery_time, source_email FROM parts_table
@@ -587,7 +564,6 @@ def lookup_prices(items):
                     WHERE TRIM(LOWER(brand))=TRIM(LOWER(%s))
                     ORDER BY part_no ASC, price ASC
                 """, (brand,))
-                
             rows=cur.fetchall()
             if rows:
                 for db_part, supplier, price, currency, delivery_time, source_email in rows:
@@ -628,7 +604,7 @@ def check_login(u, p):
 
 
 # ─────────────────────────────────────────────
-#  ★ COLUMN & BRAND NORMALISATION
+#  COLUMN & BRAND NORMALISATION
 # ─────────────────────────────────────────────
 COLUMN_ALIASES = {
     "brand": [
@@ -654,7 +630,7 @@ COLUMN_ALIASES = {
         "deliverydays", "lead", "leadtimedelivery",
     ],
     "source_email": [
-        "sourceemail", "email", "contactemail", 
+        "sourceemail", "email", "contactemail",
         "contact", "supplieremail"
     ]
 }
@@ -666,7 +642,6 @@ BRAND_ALIASES = {
 }
 
 def normalise_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Rename df columns to internal names using COLUMN_ALIASES."""
     col_map = {clean_col(c): c for c in df.columns}
     rename = {}
     for target, aliases in COLUMN_ALIASES.items():
@@ -678,24 +653,18 @@ def normalise_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def normalise_brands(df: pd.DataFrame) -> pd.DataFrame:
-    """Force brands to uppercase and fix known typos."""
     if "brand" not in df.columns:
         return df
-    
     df["brand"] = df["brand"].astype(str).str.strip().str.upper()
-    
     replace_dict = {}
     for true_brand, typos in BRAND_ALIASES.items():
         true_brand_upper = true_brand.upper()
         for typo in typos:
             replace_dict[typo.strip().upper()] = true_brand_upper
-            
     df["brand"] = df["brand"].replace(replace_dict)
     return df
 
-
 def load_upload_file(file) -> pd.DataFrame:
-    """Load either .xlsx or .csv and return a raw DataFrame."""
     name = file.name.lower()
     if name.endswith(".csv"):
         return pd.read_csv(file, dtype=str)
@@ -703,14 +672,11 @@ def load_upload_file(file) -> pd.DataFrame:
         return pd.read_excel(file, dtype=str)
 
 # ─────────────────────────────────────────────
-#  ★ EDGE-TO-EDGE FULLSCREEN CSS OVERRIDE
+#  FULLSCREEN CSS
 # ─────────────────────────────────────────────
 FS_CSS = """
 <style>
-/* Hide top header and global elements */
 header, .top-navbar, [data-testid="stHeader"], footer { display: none !important; }
-
-/* Override block-container to stretch absolute edge-to-edge */
 div.block-container {
     max-width: 100% !important;
     width: 100% !important;
@@ -720,15 +686,11 @@ div.block-container {
     padding-bottom: 0 !important;
     margin: 0 !important;
 }
-
-/* Pad the control header slightly so buttons aren't clipped */
 [data-testid="stHorizontalBlock"] {
     padding-left: 1.5rem !important;
     padding-right: 1.5rem !important;
     margin-bottom: 0.5rem !important;
 }
-
-/* Force DataFrames to take 100% width and eliminate borders */
 [data-testid="stDataFrame"], [data-testid="stDataEditor"] {
     width: 100% !important;
 }
@@ -795,7 +757,9 @@ if st.session_state.user is None:
     st.stop()
 
 
-# inject live animated background elements
+# ─────────────────────────────────────────────
+#  ANIMATED BACKGROUND (logged-in)
+# ─────────────────────────────────────────────
 st.markdown('''<div id="pd-grid"></div><div id="pd-diag"></div><div id="pd-particles"></div>
 <script>
 (function(){
@@ -885,7 +849,6 @@ if page == "Price Lookup":
 
     df = st.session_state.table_data
 
-    # ★ FULLSCREEN INTERCEPTOR (PRICE LOOKUP) ★
     if st.session_state.fs_pl and not df.empty:
         st.markdown(FS_CSS, unsafe_allow_html=True)
         c1, c2 = st.columns([9, 1])
@@ -904,10 +867,8 @@ if page == "Price Lookup":
 
         styled_fs = (df.style.apply(highlight_rows_fs,axis=1).format({"Unit Price":"{:,.0f}","Amount":"{:,.0f}"}))
         st.dataframe(styled_fs, use_container_width=True, hide_index=True, height=1000)
-        st.stop()  # Prevents the normal page UI from rendering below
+        st.stop()
 
-
-    # --- Normal UI Flow ---
     st.markdown("""
     <div class="page-header">
       <div class="ph-icon">📊</div>
@@ -959,9 +920,7 @@ if page == "Price Lookup":
         for i in range(n):
             b=st.session_state.get(f"brand_{i}",""); p=st.session_state.get(f"part_{i}","").strip()
             q=st.session_state.get(f"qty_{i}",1)
-            # Accept even if part number is empty to allow brand search
             if b and b!="": items.append({"brand":b,"part_no":p,"qty":q})
-            
         if items:
             with st.spinner("Fetching prices…"):
                 results=lookup_prices(items)
@@ -984,8 +943,6 @@ if page == "Price Lookup":
         </div>""", unsafe_allow_html=True)
 
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        
-        # ★ FULL SCREEN VIEW BUTTON (PRICE LOOKUP) ★
         c_hdr1, c_hdr2 = st.columns([6, 1])
         with c_hdr1:
             st.markdown('<div class="section-label">All Supplier Prices</div>', unsafe_allow_html=True)
@@ -1004,7 +961,7 @@ if page == "Price Lookup":
 
         styled=(df.style.apply(highlight_rows,axis=1).format({"Unit Price":"{:,.0f}","Amount":"{:,.0f}"}))
         st.dataframe(styled, use_container_width=True, hide_index=True, height=360)
-        
+
         st.markdown("""
         <div style="display:flex;gap:16px;margin-top:10px;font-size:.74rem;color:#64748B;">
           <span><span class="badge badge-green">Green</span> Cheapest version of that specific part</span>
@@ -1025,7 +982,6 @@ if page == "Price Lookup":
                 finally:
                     release(c)
         with a2:
-            # ★ ADMIN EXPORT RESTRICTION ★
             if is_admin:
                 buf=BytesIO(); df.to_excel(buf,index=False); buf.seek(0)
                 st.download_button("📥 Export Excel", buf, file_name="price_lookup.xlsx",
@@ -1070,7 +1026,6 @@ elif page == "Saved Quotations":
     display_df=final_df.drop(columns=["_offer_id"],errors="ignore").copy()
     display_df.insert(0,"Select",False)
 
-    # ★ FULLSCREEN INTERCEPTOR (SAVED QUOTATIONS) ★
     if st.session_state.fs_sq:
         st.markdown(FS_CSS, unsafe_allow_html=True)
         c1, c2 = st.columns([9, 1])
@@ -1078,11 +1033,9 @@ elif page == "Saved Quotations":
         if c2.button("✕ Close Fullscreen", use_container_width=True):
             st.session_state.fs_sq = False
             st.rerun()
-            
         st.dataframe(display_df.drop(columns=["Select"]), use_container_width=True, hide_index=True, height=1000)
         st.stop()
 
-    # --- Normal UI Flow ---
     st.markdown("""
     <div class="page-header">
       <div class="ph-icon">📁</div>
@@ -1098,8 +1051,6 @@ elif page == "Saved Quotations":
     </div>""", unsafe_allow_html=True)
 
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    
-    # ★ FULL SCREEN VIEW BUTTON (SAVED QUOTATIONS) ★
     c_hdr1, c_hdr2 = st.columns([6, 1])
     with c_hdr1:
         st.markdown('<div class="section-label">All Records</div>', unsafe_allow_html=True)
@@ -1107,20 +1058,17 @@ elif page == "Saved Quotations":
         if st.button("⛶ Full Screen", key="btn_fs_sq", use_container_width=True):
             st.session_state.fs_sq = True
             st.rerun()
-            
     edited_df=st.data_editor(display_df, use_container_width=True, hide_index=True, height=400, key="saved_editor")
     st.markdown('</div>', unsafe_allow_html=True)
 
     b1,b2,_ = st.columns([1.3,1.3,5])
     with b1:
-        # ★ ADMIN EXPORT RESTRICTION ★
         if is_admin:
             buf=BytesIO(); final_df.drop(columns=["_offer_id"],errors="ignore").to_excel(buf,index=False); buf.seek(0)
             st.download_button("📥 Download All", buf, file_name="all_quotations.xlsx",
                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                                use_container_width=True)
     with b2:
-        # ★ ADMIN DELETE RESTRICTION ★
         if is_admin:
             if st.button("🗑 Delete Selected", use_container_width=True):
                 sel_mask=edited_df["Select"]==True
@@ -1145,12 +1093,10 @@ elif page == "Saved Quotations":
 # ═══════════════════════════════════════════
 elif page == "Data Upload":
 
-    # ★ ADMIN PAGE SECURITY CHECK ★
     if not is_admin:
         st.error("⛔ Access Denied. Administrator privileges required to view this page.")
         st.stop()
 
-    # ── Accepted column guide ──
     guide_html = """
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -1186,7 +1132,6 @@ elif page == "Data Upload":
     </div>
     """
 
-    # ── File uploader ──
     file = st.file_uploader("Upload Excel (.xlsx) or CSV (.csv) file", type=["xlsx", "csv"])
 
     if file:
@@ -1214,15 +1159,14 @@ elif page == "Data Upload":
                 df_raw[col] = df_raw[col].astype(str).str.replace(r'[\n"\r]', '', regex=True).str.strip().replace("nan", "")
 
         df_raw["price"] = pd.to_numeric(df_raw["price"], errors="coerce").fillna(0)
-        df_raw = df_raw[(df_raw["part_no"] != "") & (df_raw["part_no"] != "nan") & 
-                        (df_raw["brand"] != "") & (df_raw["brand"] != "nan") & 
+        df_raw = df_raw[(df_raw["part_no"] != "") & (df_raw["part_no"] != "nan") &
+                        (df_raw["brand"] != "") & (df_raw["brand"] != "nan") &
                         (df_raw["supplier"]!= "") & (df_raw["supplier"]!= "nan")]
         df_raw = df_raw.drop_duplicates(subset=["part_no", "brand", "supplier"], keep="last")
 
         preview_cols = [c for c in ["brand","part_no","price","currency","delivery_time","source_email","supplier"] if c in df_raw.columns]
         friendly_names = {"brand": "Brand / Make", "part_no": "Part Number", "price": "Unit Price", "currency": "Currency", "delivery_time": "Lead Time", "source_email": "Source Email", "supplier": "Supplier Name"}
 
-        # ★ FULLSCREEN INTERCEPTOR (DATA UPLOAD PREVIEW) ★
         if st.session_state.fs_up:
             st.markdown(FS_CSS, unsafe_allow_html=True)
             c1, c2 = st.columns([9, 1])
@@ -1233,21 +1177,19 @@ elif page == "Data Upload":
             st.dataframe(df_raw[preview_cols].rename(columns=friendly_names), use_container_width=True, hide_index=True, height=1000)
             st.stop()
 
-        # --- Normal UI Flow ---
         st.markdown("""
         <div class="page-header">
           <div class="ph-icon">📤</div>
           <div><div class="ph-title">Master Data Upload</div>
                <div class="ph-sub">Upload price sheets (Excel or CSV) to update the parts database</div></div>
         </div>""", unsafe_allow_html=True)
-        
+
         import streamlit.components.v1 as components
         components.html(guide_html, height=350)
-        
+
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         file_type_label = "CSV" if file.name.lower().endswith(".csv") else "Excel"
-        
-        # ★ FULL SCREEN VIEW BUTTON (DATA UPLOAD) ★
+
         c_hdr1, c_hdr2 = st.columns([6, 1])
         with c_hdr1:
             st.markdown(
@@ -1260,7 +1202,7 @@ elif page == "Data Upload":
             if st.button("⛶ Full Screen", key="btn_fs_up", use_container_width=True):
                 st.session_state.fs_up = True
                 st.rerun()
-            
+
         st.dataframe(
             df_raw[preview_cols].rename(columns=friendly_names).head(30),
             use_container_width=True, hide_index=True, height=280
@@ -1269,7 +1211,7 @@ elif page == "Data Upload":
 
         if st.button(f"⬆ Upload {len(df_raw):,} Rows to Database"):
             values = list(df_raw[["part_no","brand","price","supplier","currency","delivery_time","source_email"]].itertuples(index=False, name=None))
-            total, chunk = len(values), 50  
+            total, chunk = len(values), 50
             chunks = [values[i:i+chunk] for i in range(0, total, chunk)]
             n_chunks = len(chunks)
 
@@ -1291,13 +1233,13 @@ elif page == "Data Upload":
                             delivery_time = EXCLUDED.delivery_time,
                             source_email  = EXCLUDED.source_email
                     """, chunk_vals, page_size=chunk)
-                    
+
                     uploaded += len(chunk_vals)
                     pct = int((idx + 1) / n_chunks * 100)
                     progress_bar.progress(pct)
                     status_text.markdown(f"<div style='font-size:.78rem;color:#64748B;'>Processed <strong>{uploaded:,}</strong> of <strong>{total:,}</strong> rows ({pct}%)</div>", unsafe_allow_html=True)
                     time.sleep(0.02)
-                    
+
                 c.commit()
                 fetch_brands.clear()
                 progress_bar.progress(100)
@@ -1315,7 +1257,6 @@ elif page == "Data Upload":
                 st.rerun()
 
     else:
-        # Show Guide when no file is uploaded
         st.markdown("""
         <div class="page-header">
           <div class="ph-icon">📤</div>
@@ -1331,7 +1272,6 @@ elif page == "Data Upload":
 # ═══════════════════════════════════════════
 elif page == "Access Control":
 
-    # ★ ADMIN PAGE SECURITY CHECK ★
     if not is_admin:
         st.error("⛔ Access Denied. Administrator privileges required to view this page.")
         st.stop()
@@ -1343,19 +1283,20 @@ elif page == "Access Control":
            <div class="ph-sub">Manage user accounts and permissions</div></div>
     </div>""", unsafe_allow_html=True)
 
-    col_a,col_b=st.columns(2,gap="large")
+    # ── Row 1: Create User  |  Remove Employee ──
+    col_a, col_b = st.columns(2, gap="large")
 
     with col_a:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="section-label">Create New User</div>', unsafe_allow_html=True)
-        nu =st.text_input("Username",placeholder="e.g. john.doe",key="nu")
-        np_=st.text_input("Password",type="password",placeholder="Secure password",key="np")
+        nu  = st.text_input("Username", placeholder="e.g. john.doe", key="nu")
+        np_ = st.text_input("Password", type="password", placeholder="Secure password", key="np")
         st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-        if st.button("✚ Create User",use_container_width=True):
+        if st.button("✚ Create User", use_container_width=True):
             if nu and np_:
-                c=get_conn(); cur=c.cursor()
+                c = get_conn(); cur = c.cursor()
                 try:
-                    cur.execute("INSERT INTO users(username,password) VALUES(%s,%s)",(nu,np_))
+                    cur.execute("INSERT INTO users(username,password) VALUES(%s,%s)", (nu, np_))
                     c.commit(); st.success(f"User '{nu}' created.")
                 except Exception as e:
                     c.rollback(); st.error(f"Error: {e}")
@@ -1368,19 +1309,19 @@ elif page == "Access Control":
     with col_b:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="section-label">Remove Employee</div>', unsafe_allow_html=True)
-        c=get_conn(); cur=c.cursor()
+        c = get_conn(); cur = c.cursor()
         try:
             cur.execute("SELECT username FROM users WHERE username!='admin' ORDER BY username")
-            users=[x[0] for x in cur.fetchall()]
+            users = [x[0] for x in cur.fetchall()]
         finally:
             release(c)
         if users:
-            del_u=st.selectbox("Select employee to remove",users)
+            del_u = st.selectbox("Select employee to remove", users)
             st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-            if st.button("🗑 Delete Employee",use_container_width=True):
-                c=get_conn(); cur=c.cursor()
+            if st.button("🗑 Delete Employee", use_container_width=True):
+                c = get_conn(); cur = c.cursor()
                 try:
-                    cur.execute("DELETE FROM users WHERE username=%s",(del_u,))
+                    cur.execute("DELETE FROM users WHERE username=%s", (del_u,))
                     c.commit(); st.success(f"User '{del_u}' removed.")
                 except Exception as e:
                     c.rollback(); st.error(f"Error: {e}")
@@ -1391,14 +1332,100 @@ elif page == "Access Control":
             st.info("No other users found.")
         st.markdown('</div>', unsafe_allow_html=True)
 
+    # ── NEW: Update Admin Credentials ──
+    st.markdown('<div class="section-card admin-cred-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-label">🔑 Update Admin Credentials</div>', unsafe_allow_html=True)
+    st.markdown(
+        "<div style='color:#64748B;font-size:.80rem;margin-bottom:18px;line-height:1.7;'>"
+        "Change the admin <strong>username</strong> and/or <strong>password</strong>. "
+        "Leave the password fields blank to keep the current password. "
+        "You will be signed out automatically after saving.</div>",
+        unsafe_allow_html=True
+    )
+
+    adm_c1, adm_c2, adm_c3 = st.columns([1.2, 1.2, 1.2])
+    with adm_c1:
+        new_admin_user = st.text_input(
+            "New Admin Username",
+            value=username,
+            placeholder="e.g. admin",
+            key="new_admin_user"
+        )
+    with adm_c2:
+        new_admin_pass = st.text_input(
+            "New Password",
+            type="password",
+            placeholder="Leave blank to keep current",
+            key="new_admin_pass"
+        )
+    with adm_c3:
+        new_admin_pass_confirm = st.text_input(
+            "Confirm New Password",
+            type="password",
+            placeholder="Re-enter new password",
+            key="new_admin_pass_confirm"
+        )
+
+    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+
+    save_col, _ = st.columns([1.2, 6])
+    with save_col:
+        if st.button("💾 Save Admin Credentials", use_container_width=True, key="save_admin_creds"):
+            new_admin_user = new_admin_user.strip()
+
+            # ── Validation ──
+            if not new_admin_user:
+                st.error("❌ Username cannot be empty.")
+            elif new_admin_pass and new_admin_pass != new_admin_pass_confirm:
+                st.error("❌ Passwords do not match. Please re-enter.")
+            elif new_admin_pass and len(new_admin_pass) < 4:
+                st.warning("⚠️ Password is very short. Consider using at least 4 characters.")
+            else:
+                c = get_conn(); cur = c.cursor()
+                try:
+                    # Check if desired username is taken by someone else
+                    if new_admin_user != username:
+                        cur.execute(
+                            "SELECT id FROM users WHERE username=%s AND username!=%s",
+                            (new_admin_user, username)
+                        )
+                        if cur.fetchone():
+                            st.error(f"❌ Username '{new_admin_user}' is already taken.")
+                            release(c)
+                            st.stop()
+
+                    if new_admin_pass:
+                        cur.execute(
+                            "UPDATE users SET username=%s, password=%s WHERE username=%s",
+                            (new_admin_user, new_admin_pass, username)
+                        )
+                    else:
+                        cur.execute(
+                            "UPDATE users SET username=%s WHERE username=%s",
+                            (new_admin_user, username)
+                        )
+                    c.commit()
+                    st.success("✅ Admin credentials updated successfully. Signing you out…")
+                    time.sleep(1)
+                    st.session_state.clear()
+                    st.rerun()
+                except Exception as e:
+                    c.rollback()
+                    st.error(f"Update failed: {e}")
+                finally:
+                    release(c)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── All Users table ──
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="section-label">All Users</div>', unsafe_allow_html=True)
-    c=get_conn(); cur=c.cursor()
+    c = get_conn(); cur = c.cursor()
     try:
         cur.execute("SELECT username FROM users ORDER BY username")
-        all_u=pd.DataFrame(cur.fetchall(),columns=["Username"])
+        all_u = pd.DataFrame(cur.fetchall(), columns=["Username"])
     finally:
         release(c)
-    all_u["Role"]=all_u["Username"].apply(lambda x:"🔑 Admin" if x=="admin" else "👤 Employee")
-    st.dataframe(all_u,use_container_width=True,hide_index=True,height=220)
+    all_u["Role"] = all_u["Username"].apply(lambda x: "🔑 Admin" if x == "admin" else "👤 Employee")
+    st.dataframe(all_u, use_container_width=True, hide_index=True, height=220)
     st.markdown('</div>', unsafe_allow_html=True)
